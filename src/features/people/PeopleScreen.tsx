@@ -13,6 +13,8 @@ import { countActiveGiftsByPerson } from "../../domain/gifts";
 import { sortPeople } from "../../domain/sorting";
 import { formatCount, GIFT_FORMS } from "../../lib/plural";
 import { useLoad } from "../../lib/useLoad";
+import { MissedRemindersCard } from "../notifications/MissedRemindersCard";
+import { UpcomingBirthdays } from "./UpcomingBirthdays";
 
 function PersonSummary({ person, activeGifts }: { person: Person; activeGifts: number }) {
   return (
@@ -42,6 +44,11 @@ export function PeopleScreen() {
   return (
     <>
       <ScreenHeader title="GiftList" />
+
+      <MissedRemindersCard />
+      {overview.status === "ready" && overview.data.people.length > 0 && !reordering && (
+        <UpcomingBirthdays people={overview.data.people} />
+      )}
 
       <section className="section" aria-labelledby="people-heading">
         <div className="section__header">

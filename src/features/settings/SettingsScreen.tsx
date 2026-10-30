@@ -7,6 +7,7 @@ import { ChevronIcon } from "../../components/icons";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import type { Theme } from "../../domain/entities";
+import { BirthdayNotificationsSetting } from "../notifications/BirthdayNotificationsSetting";
 
 const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: "SYSTEM", label: "Podle systému" },
@@ -21,6 +22,8 @@ export function SettingsScreen() {
   return (
     <>
       <ScreenHeader title="Nastavení" />
+
+      <BirthdayNotificationsSetting />
 
       <section className="section">
         <fieldset className="field">

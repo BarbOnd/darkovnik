@@ -106,7 +106,7 @@ No reliable exact-time background scheduling exists for PWAs on Android without 
 - no Push API server, Firebase, OneSignal, cron, or other backend;
 - the UI never claims delivery while the app is closed.
 
-Periodic Background Sync may be added later only as an optional enhancement where supported; it must not be required.
+Periodic Background Sync is used as an optional enhancement where supported (phase 8): the service worker registers a daily `periodicsync` tag and runs the same pure reminder logic against IndexedDB, recording shown reminders in `notificationLog`. It must never be required; unsupported browsers keep evaluation on open. No server, push service, or secret is involved.
 
 ## Error handling
 

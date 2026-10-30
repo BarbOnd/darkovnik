@@ -103,16 +103,16 @@ The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 
 ## Phase 6 — Birthdays and reminders
 
-- [ ] Birthday logic: next occurrence, age (only with year), 29 Feb, local dates
-- [ ] Upcoming birthdays today … today + 30
-- [ ] Global toggle in Settings; permission request on enabling
-- [ ] Reminder evaluation on start, on visibility change, daily while open
-- [ ] Types BEFORE_30 and DAY, relevance windows, NotificationLog deduplication
-- [ ] One summarizing system notification when permitted
-- [ ] "Zmeškané připomínky" card on the People screen
-- [ ] Denied/unsupported permission → in-app only + note in Settings
-- [ ] Verify behavior on Android; document limitations
-- [ ] No remote notification service
+- [x] Birthday logic: next occurrence, age (only with year), 29 Feb, local dates
+- [x] Upcoming birthdays today … today + 30
+- [x] Global toggle in Settings; permission request on enabling
+- [x] Reminder evaluation on start, on visibility change, daily while open
+- [x] Types BEFORE_30 and DAY, relevance windows, NotificationLog deduplication
+- [x] One summarizing system notification when permitted
+- [x] "Zmeškané připomínky" card on the People screen
+- [x] Denied/unsupported permission → in-app only + note in Settings
+- [ ] Verify behavior on Android (needs a device; after phase 8 for system notifications) — limitations documented in PRODUCT.md §12
+- [x] No remote notification service
 
 ## Phase 7 — Backup
 
@@ -132,6 +132,7 @@ The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 
 - [ ] `vite-plugin-pwa`, service worker, offline app shell
 - [ ] Update banner "Je dostupná nová verze" (registerType prompt)
+- [ ] Periodic Background Sync for birthday reminders (optional; Chromium Android, installed app), shared reminder logic, honest note in Settings
 - [ ] Maskable icon, manifest with relative `start_url`/`scope`
 - [ ] Test installation on Android, standalone mode
 - [ ] Test offline CRUD and persistence after restart

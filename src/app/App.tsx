@@ -15,6 +15,7 @@ import { PersonDetailScreen } from "../features/people/PersonDetailScreen";
 import { EditPersonScreen, NewPersonScreen } from "../features/people/PersonFormScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { TagsScreen } from "../features/tags/TagsScreen";
+import { useReminders } from "../features/notifications/useReminders";
 import { AppContext, type AppContextValue } from "./AppContext";
 import { paths, useRoute, type Route } from "./routes";
 import { applyTheme } from "./theme";
@@ -118,12 +119,22 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  const remindersEnabled = start.status === "ready" && start.metadata.birthdayNotificationsEnabled;
+  const reminders = useReminders(repository, remindersEnabled);
+
   const context = useMemo<AppContextValue | null>(
     () =>
       start.status === "ready"
-        ? { repository, metadata: start.metadata, updatePreferences, showToast }
+        ? {
+            repository,
+            metadata: start.metadata,
+            updatePreferences,
+            showToast,
+            missedReminders: reminders.missed,
+            dismissMissedReminders: reminders.dismiss,
+          }
         : null,
-    [repository, start, updatePreferences, showToast],
+    [repository, start, updatePreferences, showToast, reminders.missed, reminders.dismiss],
   );
 
   return (

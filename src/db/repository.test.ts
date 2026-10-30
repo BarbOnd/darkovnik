@@ -996,3 +996,34 @@ describe("gifts with links (gift form)", () => {
     ]);
   });
 });
+
+describe("notification log (birthday reminders)", () => {
+  it("claims each reminder once, skips deleted people and removes entries older than a year", async () => {
+    const repository = createRepository(); // now = 2026-01-01T12:00:00.000Z
+    await repository.initialize();
+    const jana = await createPerson(repository, "Jana");
+
+    const database = await openGiftListDatabase(activeDatabaseName);
+    const write = database.transaction(STORE_NAMES.notificationLog, "readwrite");
+    write.objectStore(STORE_NAMES.notificationLog).put({
+      key: `${jana.id}:DAY:2024-05-14`,
+      personId: jana.id,
+      type: "DAY",
+      occurrenceDate: "2024-05-14",
+      shownAt: "2024-05-14T08:00:00.000Z",
+    });
+    await new Promise((resolve) => (write.oncomplete = resolve));
+    database.close();
+
+    const claim = { key: `${jana.id}:BEFORE_30:2026-01-20`, personId: jana.id, type: "BEFORE_30" as const, occurrenceDate: "2026-01-20" };
+    const deletedPerson = { key: "99:DAY:2026-01-01", personId: 99, type: "DAY" as const, occurrenceDate: "2026-01-01" };
+
+    expect(await repository.claimReminders([claim, deletedPerson])).toEqual([claim.key]);
+    expect(await repository.claimReminders([claim])).toEqual([]);
+    expect(await repository.listNotificationLogKeys()).toEqual([claim.key]);
+
+    await expect(
+      repository.claimReminders([{ ...claim, key: "x", type: "WEEK" as never }]),
+    ).rejects.toThrow("Neplatný typ připomínky.");
+  });
+});

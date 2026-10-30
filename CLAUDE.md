@@ -106,7 +106,7 @@ Each person has an opaque random `avatarSeed` created on person creation. Never 
 
 ## Birthday reminders
 
-Use only free browser/PWA capabilities. Never add Firebase, OneSignal, a server, cron, or another notification backend. Never claim guaranteed delivery while the app is closed. Reminders are evaluated when the app opens or becomes visible; see PRODUCT.md §11.
+Use only free browser/PWA capabilities. Never add Firebase, OneSignal, a server, cron, or another notification backend. Never claim guaranteed delivery while the app is closed. Reminders are evaluated when the app opens or becomes visible; Periodic Background Sync (Chromium Android, installed app) may additionally evaluate them roughly daily as an optional enhancement — never required, never promised. See PRODUCT.md §12.
 
 ## Privacy
 

@@ -201,6 +201,8 @@ For each person with a birthday:
 ### When reminders are evaluated
 Browsers/PWAs cannot reliably wake a closed app at an exact time. Therefore the app evaluates reminders **every time it is opened or becomes visible again** (and once a day while it stays open). Delivery while the app is completely closed is never promised.
 
+**Background check (optional enhancement, phase 8):** where the browser supports Periodic Background Sync (Chrome/Edge on Android, installed app only), the service worker also evaluates reminders roughly once a day while the app is closed and shows the same summarizing notification. The browser decides when (and whether) this runs — not at an exact time, possibly less often or never in battery-saving mode. It uses the same local logic and NotificationLog, needs no server, and data never leaves the device. Settings describe this honestly ("většinou, pokud to telefon dovolí"); evaluation on open remains the baseline.
+
 ### What is shown
 On evaluation, the app finds reminders that are **due (due date ≤ today)**, **not yet shown** on this device (NotificationLog), and **still relevant**:
 - BEFORE_30: relevant until the birthday itself (then replaced by DAY);
@@ -212,6 +214,11 @@ For the found reminders:
 3. Record each reminder in NotificationLog so it is never shown again.
 
 If the setting is off, nothing is evaluated or recorded.
+
+### Known limitations
+- On Android, Chrome shows system notifications only through a service worker. Until the service worker exists (phase 8), reminders there appear only in the in-app card; desktop browsers can show them directly.
+- The card lists reminders found during the current session; after a reload they are already recorded in NotificationLog and are not repeated.
+- Without the optional background check (phase 8), nothing is evaluated while the app is closed.
 
 ### Notification permission
 When the user turns the setting on, the app asks the browser for notification permission (the Android dialog "Povolit aplikaci GiftList zobrazovat oznámení?").

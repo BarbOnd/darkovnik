@@ -10,9 +10,20 @@ import { CakeIcon, MoreIcon } from "../../components/icons";
 import type { PersonDeletionImpact } from "../../db/repository";
 import type { Person } from "../../domain/entities";
 import { GiftList } from "../gifts/GiftList";
-import { formatBirthdayCs } from "../../lib/format";
+import { ageAt, daysBetween, localDateOf, nextOccurrence } from "../../domain/birthdays";
+import { formatBirthdayCs, formatRelativeDays } from "../../lib/format";
+import { formatCount, YEAR_FORMS } from "../../lib/plural";
 import { useLoad } from "../../lib/useLoad";
 import { personDeletionText } from "./deletionText";
+
+/** " · za 12 dní · 36 let" (age only with a known year). */
+function nextBirthdaySuffix(birthday: string): string {
+  const today = localDateOf(new Date());
+  const next = nextOccurrence(birthday, today);
+  if (next === null) return "";
+  const age = ageAt(birthday, next);
+  return ` · ${formatRelativeDays(daysBetween(today, next))}${age === null ? "" : ` · ${formatCount(age, YEAR_FORMS)}`}`;
+}
 
 /** Avatar and photo are changed in "Upravit" (person form), not from this menu. */
 function PersonMenu({ onEdit, onDelete }: { onEdit(): void; onDelete(): void }) {
@@ -159,6 +170,7 @@ export function PersonDetailScreen({ personId }: { personId: number }) {
               <CakeIcon className="inline-icon" />
               <span className="visually-hidden">Narozeniny: </span>
               {formatBirthdayCs(person.birthday)}
+              {nextBirthdaySuffix(person.birthday)}
             </p>
           )}
         </section>

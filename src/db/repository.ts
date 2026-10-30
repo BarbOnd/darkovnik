@@ -5,6 +5,7 @@ import {
   GIFT_STATUSES,
   isOneOf,
   PEOPLE_SORT_MODES,
+  REMINDER_TYPES,
   THEMES,
   type Gift,
   type GiftLink,
@@ -35,6 +36,8 @@ import {
 export type { AppMetadata, AppPreferences } from "./metadata";
 
 const DEFAULT_TAG_NAMES = ["Vánoce", "Narozeniny", "Výročí"] as const;
+/** NotificationLog entries older than this may be removed (DATABASE.md → NotificationLog). */
+const NOTIFICATION_LOG_RETENTION_MS = 366 * 24 * 60 * 60 * 1000;
 
 type CounterName = "people" | "gifts" | "tags" | "giftLinks";
 
@@ -65,6 +68,8 @@ export type CreateGiftLinkInput = Pick<GiftLink, "giftId" | "url" | "title">;
 /** An empty `title` removes the title; an omitted field stays unchanged. */
 export type UpdateGiftLinkInput = Partial<Pick<GiftLink, "url" | "title">>;
 export type UpdatePreferencesInput = Partial<AppPreferences>;
+
+export type ReminderClaim = Omit<NotificationLogEntry, "shownAt">;
 
 export type PersonDeletionImpact = {
   /** Gifts for this person; they are deleted with the person. */
@@ -124,6 +129,15 @@ export type GiftListRepository = {
   listGiftTagIds(giftId: number): Promise<number[]>;
   /** Every gift–tag association (for filters and tag usage counts). */
   listAllGiftTags(): Promise<GiftTag[]>;
+
+  /** Keys of reminders already shown on this device. */
+  listNotificationLogKeys(): Promise<string[]>;
+  /**
+   * Records reminders as shown and returns the keys that were not recorded yet
+   * (so a reminder is shown once even with two open windows). Entries of deleted
+   * people are skipped; entries older than one year are removed.
+   */
+  claimReminders(entries: ReminderClaim[]): Promise<string[]>;
   createGiftTag(association: GiftTag): Promise<GiftTag>;
   /** Replaces the gift's tag associations with exactly `tagIds`. */
   setGiftTags(giftId: number, tagIds: number[]): Promise<void>;
@@ -1033,6 +1047,35 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
 
     listAllGiftTags(): Promise<GiftTag[]> {
       return readAll<GiftTag>(STORE_NAMES.giftTags);
+    },
+
+    async listNotificationLogKeys(): Promise<string[]> {
+      const entries = await readAll<NotificationLogEntry>(STORE_NAMES.notificationLog);
+      return entries.map((entry) => entry.key);
+    },
+
+    async claimReminders(entries: ReminderClaim[]): Promise<string[]> {
+      entries.forEach((entry) => {
+        assertPositiveId(entry.personId, "ID osoby");
+        if (!isOneOf(REMINDER_TYPES, entry.type)) throw new Error("Neplatný typ připomínky.");
+      });
+      const shownAt = now();
+      const oldestKept = new Date(shownAt.getTime() - NOTIFICATION_LOG_RETENTION_MS).toISOString();
+      return inTransaction([STORE_NAMES.people, STORE_NAMES.notificationLog], async (transaction) => {
+        const people = transaction.objectStore(STORE_NAMES.people);
+        const log = transaction.objectStore(STORE_NAMES.notificationLog);
+        const claimed: string[] = [];
+        for (const entry of entries) {
+          const existing = await requestResult(log.get(entry.key) as IDBRequest<NotificationLogEntry | undefined>);
+          const person = await requestResult(people.get(entry.personId) as IDBRequest<Person | undefined>);
+          if (existing !== undefined || person === undefined) continue;
+          log.put({ ...entry, shownAt: shownAt.toISOString() } satisfies NotificationLogEntry);
+          claimed.push(entry.key);
+        }
+        const all = await requestResult(log.getAll() as IDBRequest<NotificationLogEntry[]>);
+        all.filter((entry) => entry.shownAt < oldestKept).forEach((entry) => log.delete(entry.key));
+        return claimed;
+      });
     },
   };
 
