@@ -81,7 +81,7 @@ A gift may have zero or more links. Each link contains:
 - optional display title, entered manually (the app does not fetch page titles — that would need a server because of CORS);
 - order: a unique non-negative integer within the gift, normalized to `0..n-1`.
 
-The user can add, edit, reorder, and remove links. Links open externally (new tab / browser).
+The user can add, edit, reorder (up/down), and remove links. Links open externally (new tab / browser). When the user types an address without a scheme (e.g. `alza.cz/lego`), `https://` is added; other schemes are rejected. All gift fields and its links are saved together in one transaction.
 
 ## 5. Priority
 

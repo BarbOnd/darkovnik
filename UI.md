@@ -85,6 +85,8 @@ Sluchátka                     ✓
 - Status chips are single-select; tag chips are multi-select; selected chips are visually distinct.
 - "Zrušit filtry" appears only when filters differ from the default (Aktivní, no tags).
 - Given gifts are hidden unless "Předáno" or "Vše" is selected.
+- Until the filters exist (phase 4), given gifts are revealed with a "Zobrazit předané (N)" toggle below the list.
+- Tapping a gift opens its edit form; "Přidat dárek" opens the full gift form with this person preselected.
 
 ## Reorder mode
 
@@ -115,7 +117,7 @@ Order:
 
 Then: Kdo koupí, Priorita, Štítky, Odkazy, Poznámka, Stav.
 
-Do not make the form feel administrative; optional fields may be collapsed under "Další podrobnosti".
+Do not make the form feel administrative: optional fields are collapsed under "Další podrobnosti" (open when editing). Links: URL + optional title, buttons Otevřít / Posunout nahoru / Posunout dolů / Odebrat. Status labels: Nápad / Koupeno / Předáno. "Smazat dárek" is at the bottom of the edit form, separated from Uložit, and asks for confirmation.
 
 ## Quick add
 

@@ -8,6 +8,7 @@ import { StatusMessage } from "../../components/StatusMessage";
 import { CakeIcon, MoreIcon } from "../../components/icons";
 import type { PersonDeletionImpact } from "../../db/repository";
 import type { Person } from "../../domain/entities";
+import { GiftList } from "../gifts/GiftList";
 import { formatBirthdayCs } from "../../lib/format";
 import { useLoad } from "../../lib/useLoad";
 import { personDeletionText } from "./deletionText";
@@ -159,9 +160,9 @@ export function PersonDetailScreen({ personId }: { personId: number }) {
               {formatBirthdayCs(person.birthday)}
             </p>
           )}
-          <p className="person-detail__note">Seznam dárků přibude v další verzi aplikace.</p>
         </section>
       )}
+      {person !== undefined && <GiftList person={person} />}
 
       {person !== undefined && deletion !== null && (
         <DeletePersonDialog person={person} impact={deletion} onClose={() => setDeletion(null)} />

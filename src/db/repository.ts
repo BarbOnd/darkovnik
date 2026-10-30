@@ -51,6 +51,13 @@ export type CreateGiftInput = Pick<
   "personId" | "name" | "note" | "priority" | "status" | "buyerPersonId"
 >;
 export type UpdateGiftInput = Partial<CreateGiftInput>;
+/** A link as edited in the gift form; without `id` it is a new link. Array order = link order. */
+export type GiftLinkDraft = { id?: number; url: string; title?: string };
+/** One independent gift per recipient, each with its own copies of the links. */
+export type CreateGiftsInput = Omit<CreateGiftInput, "personId"> & {
+  personIds: number[];
+  links: GiftLinkDraft[];
+};
 export type CreateTagInput = Pick<Tag, "name">;
 export type CreateGiftLinkInput = Pick<GiftLink, "giftId" | "url" | "title">;
 /** An empty `title` removes the title; an omitted field stays unchanged. */
@@ -86,7 +93,11 @@ export type GiftListRepository = {
   listGifts(): Promise<Gift[]>;
   listGiftsByPerson(personId: number): Promise<Gift[]>;
   createGift(input: CreateGiftInput): Promise<Gift>;
+  /** Creates one gift per recipient with its links, all in one transaction (nothing on failure). */
+  createGiftsWithLinks(input: CreateGiftsInput): Promise<Gift[]>;
   updateGift(id: number, input: UpdateGiftInput): Promise<Gift>;
+  /** Updates the gift and makes its links exactly `links`, in one transaction. */
+  saveGiftWithLinks(id: number, input: UpdateGiftInput, links: GiftLinkDraft[]): Promise<Gift>;
   /** `giftIds` must contain every gift of the recipient exactly once, in the new manual order. */
   reorderGifts(personId: number, giftIds: number[]): Promise<void>;
   deleteGift(id: number): Promise<void>;
@@ -202,6 +213,18 @@ function assertPermutation(ids: number[], existingIds: number[], message: string
     seen.add(id);
   }
   if (seen.size !== expected.size) throw new Error(message);
+}
+
+function assertLinkDrafts(links: GiftLinkDraft[], allowIds: boolean): void {
+  const ids = new Set<number>();
+  for (const link of links) {
+    assertHttpUrl(link.url);
+    if (link.id === undefined) continue;
+    if (!allowIds) throw new Error("Nový dárek nemůže převzít existující odkaz.");
+    assertPositiveId(link.id, "ID odkazu");
+    if (ids.has(link.id)) throw new Error("Odkaz je v seznamu vícekrát.");
+    ids.add(link.id);
+  }
 }
 
 function normalizeTagName(name: string): string {
@@ -331,6 +354,121 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
     return gifts.sort(compareBySortOrder);
   }
 
+  /**
+   * Runs `work` in one readwrite transaction. If it throws, the transaction is
+   * aborted so no partial writes are committed.
+   */
+  async function inTransaction<T>(
+    storeNames: StoreName[],
+    work: (transaction: IDBTransaction) => Promise<T>,
+  ): Promise<T> {
+    const db = await connection();
+    const transaction = db.transaction(storeNames, "readwrite");
+    const done = transactionDone(transaction);
+    let result: T;
+    try {
+      result = await work(transaction);
+    } catch (error) {
+      try {
+        transaction.abort();
+      } catch {
+        // Already finished; nothing was written after the failure.
+      }
+      await done.catch(() => undefined);
+      throw error;
+    }
+    await done;
+    return result;
+  }
+
+  /** Creates one gift at the top of the recipient's manual order (recipient and buyer must exist). */
+  async function insertGift(
+    transaction: IDBTransaction,
+    metadata: MetadataRecord,
+    input: CreateGiftInput,
+    timestamp: string,
+  ): Promise<Gift> {
+    const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
+    const recipientGifts = await giftsOfPerson(giftsStore, input.personId);
+    const gift: Gift = {
+      id: allocateId(metadata, "gifts"),
+      personId: input.personId,
+      name: input.name,
+      note: input.note,
+      priority: input.priority,
+      status: input.status,
+      buyerPersonId: input.buyerPersonId,
+      sortOrder: 0,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    writeSortOrder(giftsStore, recipientGifts, 1);
+    giftsStore.put(gift);
+    return gift;
+  }
+
+  /** Applies a gift update; a new recipient puts the gift at the top of their manual order. */
+  async function applyGiftUpdate(transaction: IDBTransaction, id: number, input: UpdateGiftInput): Promise<Gift> {
+    const people = transaction.objectStore(STORE_NAMES.people);
+    const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
+    const gift = await entityMustExist<Gift>(giftsStore, id, "Dárek neexistuje.");
+    const updated: Gift = {
+      ...gift,
+      personId: input.personId ?? gift.personId,
+      name: input.name ?? gift.name,
+      note: input.note ?? gift.note,
+      priority: input.priority ?? gift.priority,
+      status: input.status ?? gift.status,
+      buyerPersonId: input.buyerPersonId !== undefined ? input.buyerPersonId : gift.buyerPersonId,
+      updatedAt: now().toISOString(),
+    };
+    if (updated.buyerPersonId !== null && updated.buyerPersonId !== gift.buyerPersonId) {
+      await entityMustExist<Person>(people, updated.buyerPersonId, "Kupující dárku neexistuje.");
+    }
+    if (updated.personId !== gift.personId) {
+      await entityMustExist<Person>(people, updated.personId, "Příjemce dárku neexistuje.");
+      writeSortOrder(giftsStore, await giftsOfPerson(giftsStore, updated.personId), 1);
+      updated.sortOrder = 0;
+    }
+    giftsStore.put(updated);
+    return updated;
+  }
+
+  /**
+   * Makes the gift's links exactly `drafts`, in that order (sortOrder 0..n-1):
+   * drafts with an ID update that link, drafts without one create a link,
+   * links missing from `drafts` are deleted.
+   */
+  async function replaceLinks(
+    transaction: IDBTransaction,
+    metadata: MetadataRecord,
+    giftId: number,
+    drafts: GiftLinkDraft[],
+  ): Promise<void> {
+    const giftLinksStore = transaction.objectStore(STORE_NAMES.giftLinks);
+    const existing = new Map((await linksOfGift(giftLinksStore, giftId)).map((link) => [link.id, link]));
+    const keptIds = new Set<number>();
+    for (const draft of drafts) {
+      if (draft.id === undefined) continue;
+      if (!existing.has(draft.id)) throw new Error("Odkaz nepatří k tomuto dárku.");
+      keptIds.add(draft.id);
+    }
+    existing.forEach((link) => {
+      if (!keptIds.has(link.id)) giftLinksStore.delete(link.id);
+    });
+    drafts.forEach((draft, index) => {
+      giftLinksStore.put(
+        createGiftLinkRecord({
+          id: draft.id ?? allocateId(metadata, "giftLinks"),
+          giftId,
+          url: draft.url,
+          title: draft.title,
+          sortOrder: index,
+        }),
+      );
+    });
+  }
+
   async function deleteGiftDependencies(
     transaction: IDBTransaction,
     giftId: number,
@@ -358,7 +496,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
     }
   }
 
-  return {
+  const repository: GiftListRepository = {
     async initialize(): Promise<void> {
       const db = await connection();
       const transaction = db.transaction([STORE_NAMES.metadata, STORE_NAMES.tags], "readwrite");
@@ -574,73 +712,67 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
     },
 
     async createGift(input: CreateGiftInput): Promise<Gift> {
-      assertGiftFields(input);
-      const db = await connection();
-      const transaction = db.transaction(
-        [STORE_NAMES.people, STORE_NAMES.gifts, STORE_NAMES.metadata],
-        "readwrite",
+      const { personId, ...gift } = input;
+      const [created] = await repository.createGiftsWithLinks({ ...gift, personIds: [personId], links: [] });
+      return created;
+    },
+
+    async createGiftsWithLinks(input: CreateGiftsInput): Promise<Gift[]> {
+      const { personIds, links, ...fields } = input;
+      if (personIds.length === 0) throw new Error("Vyberte alespoň jednoho příjemce.");
+      if (new Set(personIds).size !== personIds.length) throw new Error("Příjemce je vybraný vícekrát.");
+      personIds.forEach((personId) => assertGiftFields({ ...fields, personId }));
+      assertLinkDrafts(links, false);
+      return inTransaction(
+        [STORE_NAMES.people, STORE_NAMES.gifts, STORE_NAMES.giftLinks, STORE_NAMES.metadata],
+        async (transaction) => {
+          // Check every reference before the first write.
+          const people = transaction.objectStore(STORE_NAMES.people);
+          for (const personId of personIds) {
+            await entityMustExist<Person>(people, personId, "Příjemce dárku neexistuje.");
+          }
+          if (fields.buyerPersonId !== null) {
+            await entityMustExist<Person>(people, fields.buyerPersonId, "Kupující dárku neexistuje.");
+          }
+          const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+          const metadata = await getMetadataFromStore(metadataStore);
+          const timestamp = now().toISOString();
+          const created: Gift[] = [];
+          // Independent records: every recipient gets its own gift and own copies of the links.
+          for (const personId of personIds) {
+            const gift = await insertGift(transaction, metadata, { ...fields, personId }, timestamp);
+            await replaceLinks(transaction, metadata, gift.id, links);
+            created.push(gift);
+          }
+          metadataStore.put(metadata);
+          return created;
+        },
       );
-      const done = transactionDone(transaction);
-      const people = transaction.objectStore(STORE_NAMES.people);
-      await entityMustExist<Person>(people, input.personId, "Příjemce dárku neexistuje.");
-      if (input.buyerPersonId !== null) {
-        await entityMustExist<Person>(people, input.buyerPersonId, "Kupující dárku neexistuje.");
-      }
-      const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
-      const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
-      const metadata = await getMetadataFromStore(metadataStore);
-      const recipientGifts = await giftsOfPerson(giftsStore, input.personId);
-      const timestamp = now().toISOString();
-      const gift: Gift = {
-        id: allocateId(metadata, "gifts"),
-        personId: input.personId,
-        name: input.name,
-        note: input.note,
-        priority: input.priority,
-        status: input.status,
-        buyerPersonId: input.buyerPersonId,
-        sortOrder: 0,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      };
-      writeSortOrder(giftsStore, recipientGifts, 1);
-      giftsStore.put(gift);
-      metadataStore.put(metadata);
-      await done;
-      return gift;
     },
 
     async updateGift(id: number, input: UpdateGiftInput): Promise<Gift> {
       assertPositiveId(id, "ID dárku");
       assertGiftFields(input);
-      const db = await connection();
-      const transaction = db.transaction([STORE_NAMES.people, STORE_NAMES.gifts], "readwrite");
-      const done = transactionDone(transaction);
-      const people = transaction.objectStore(STORE_NAMES.people);
-      const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
-      const gift = await entityMustExist<Gift>(giftsStore, id, "Dárek neexistuje.");
-      const updated: Gift = {
-        ...gift,
-        personId: input.personId ?? gift.personId,
-        name: input.name ?? gift.name,
-        note: input.note ?? gift.note,
-        priority: input.priority ?? gift.priority,
-        status: input.status ?? gift.status,
-        buyerPersonId: input.buyerPersonId !== undefined ? input.buyerPersonId : gift.buyerPersonId,
-        updatedAt: now().toISOString(),
-      };
-      if (updated.buyerPersonId !== null && updated.buyerPersonId !== gift.buyerPersonId) {
-        await entityMustExist<Person>(people, updated.buyerPersonId, "Kupující dárku neexistuje.");
-      }
-      if (updated.personId !== gift.personId) {
-        await entityMustExist<Person>(people, updated.personId, "Příjemce dárku neexistuje.");
-        // A moved gift goes to the top of the new recipient's manual order.
-        writeSortOrder(giftsStore, await giftsOfPerson(giftsStore, updated.personId), 1);
-        updated.sortOrder = 0;
-      }
-      giftsStore.put(updated);
-      await done;
-      return updated;
+      return inTransaction([STORE_NAMES.people, STORE_NAMES.gifts], (transaction) =>
+        applyGiftUpdate(transaction, id, input),
+      );
+    },
+
+    async saveGiftWithLinks(id: number, input: UpdateGiftInput, links: GiftLinkDraft[]): Promise<Gift> {
+      assertPositiveId(id, "ID dárku");
+      assertGiftFields(input);
+      assertLinkDrafts(links, true);
+      return inTransaction(
+        [STORE_NAMES.people, STORE_NAMES.gifts, STORE_NAMES.giftLinks, STORE_NAMES.metadata],
+        async (transaction) => {
+          const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+          const metadata = await getMetadataFromStore(metadataStore);
+          const gift = await applyGiftUpdate(transaction, id, input);
+          await replaceLinks(transaction, metadata, id, links);
+          metadataStore.put(metadata);
+          return gift;
+        },
+      );
     },
 
     async reorderGifts(personId: number, giftIds: number[]): Promise<void> {
@@ -876,4 +1008,6 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       await done;
     },
   };
+
+  return repository;
 }

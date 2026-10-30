@@ -68,6 +68,67 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
+export function StarIcon({ filled, ...props }: IconProps & { filled: boolean }) {
+  return (
+    <Svg {...props}>
+      <path
+        d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"
+        fill={filled ? "currentColor" : "none"}
+      />
+    </Svg>
+  );
+}
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </Svg>
+  );
+}
+
+export function GiftIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="8" width="17" height="4" rx="1" />
+      <path d="M5 12v8h14v-8M12 8v12" />
+      <path d="M12 8c-1-3-5-4.5-5.5-2S10 8 12 8zM12 8c1-3 5-4.5 5.5-2S14 8 12 8z" />
+    </Svg>
+  );
+}
+
+export function ArrowUpIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 19V5M6 11l6-6 6 6" />
+    </Svg>
+  );
+}
+
+export function ArrowDownIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 5v14M6 13l6 6 6-6" />
+    </Svg>
+  );
+}
+
+export function TrashIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5" />
+    </Svg>
+  );
+}
+
+export function ExternalIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+    </Svg>
+  );
+}
+
 export function CakeIcon(props: IconProps) {
   return (
     <Svg {...props}>

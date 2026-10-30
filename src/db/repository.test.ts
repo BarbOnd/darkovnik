@@ -782,3 +782,158 @@ describe("fresh installation", () => {
     expect(await repository.isFreshInstallation()).toBe(true);
   });
 });
+
+describe("gifts with links (gift form)", () => {
+  const giftFields = {
+    name: "Lego",
+    note: "velká krabice",
+    priority: "HIGH" as const,
+    status: "NEW" as const,
+    buyerPersonId: null,
+  };
+
+  it("creates independent gifts with own link copies for every recipient", async () => {
+    const repository = createRepository();
+    await repository.initialize();
+    const jana = await createPerson(repository, "Jana");
+    const petr = await createPerson(repository, "Petr");
+    const existing = await createGift(repository, petr.id, "Starší");
+
+    const created = await repository.createGiftsWithLinks({
+      ...giftFields,
+      personIds: [jana.id, petr.id],
+      links: [
+        { url: "https://example.test/a", title: " Obchod " },
+        { url: "https://example.test/b" },
+      ],
+    });
+
+    expect(created.map((gift) => gift.personId)).toEqual([jana.id, petr.id]);
+    expect(new Set(created.map((gift) => gift.id)).size).toBe(2);
+    const [forJana, forPetr] = created;
+    const janaLinks = await repository.listGiftLinks(forJana.id);
+    const petrLinks = await repository.listGiftLinks(forPetr.id);
+    expect(janaLinks.map((link) => [link.url, link.title, link.sortOrder])).toEqual([
+      ["https://example.test/a", "Obchod", 0],
+      ["https://example.test/b", undefined, 1],
+    ]);
+    expect(petrLinks.map((link) => link.url)).toEqual(janaLinks.map((link) => link.url));
+    expect(petrLinks.some((link) => janaLinks.some((other) => other.id === link.id))).toBe(false);
+    expect(manualOrder(await repository.listGiftsByPerson(petr.id))).toEqual([forPetr.id, existing.id]);
+
+    // Changing one record does not change the other.
+    await repository.saveGiftWithLinks(forJana.id, { status: "BOUGHT" }, []);
+    expect(await repository.getGift(forPetr.id)).toMatchObject({ status: "NEW" });
+    expect(await repository.listGiftLinks(forPetr.id)).toHaveLength(2);
+  });
+
+  it("writes nothing when one of the recipients does not exist", async () => {
+    const repository = createRepository();
+    await repository.initialize();
+    const jana = await createPerson(repository, "Jana");
+    const before = await repository.getMetadata();
+
+    await expect(
+      repository.createGiftsWithLinks({
+        ...giftFields,
+        personIds: [jana.id, 999],
+        links: [{ url: "https://example.test/a" }],
+      }),
+    ).rejects.toThrow("Příjemce dárku neexistuje.");
+
+    expect(await repository.listGifts()).toEqual([]);
+    expect(await repository.getMetadata()).toMatchObject({
+      highestGiftId: before.highestGiftId,
+      highestGiftLinkId: before.highestGiftLinkId,
+    });
+  });
+
+  it.each([
+    [{ personIds: [] }, "Vyberte alespoň jednoho příjemce."],
+    [{ personIds: [1, 1] }, "Příjemce je vybraný vícekrát."],
+    [{ links: [{ url: "ftp://example.test" }] }, "Odkaz musí být platná HTTP nebo HTTPS adresa."],
+    [{ links: [{ id: 1, url: "https://example.test" }] }, "Nový dárek nemůže převzít existující odkaz."],
+    [{ name: "  " }, "Název dárku nesmí být prázdný."],
+  ])("rejects invalid input %#", async (override, message) => {
+    const repository = createRepository();
+    await repository.initialize();
+    await createPerson(repository, "Jana");
+    await expect(
+      repository.createGiftsWithLinks({ ...giftFields, personIds: [1], links: [], ...override }),
+    ).rejects.toThrow(message);
+    expect(await repository.listGifts()).toEqual([]);
+  });
+
+  it("saves gift fields and replaces links: update, add, remove, reorder", async () => {
+    const repository = createRepository();
+    await repository.initialize();
+    const jana = await createPerson(repository, "Jana");
+    const petr = await createPerson(repository, "Petr");
+    const [gift] = await repository.createGiftsWithLinks({
+      ...giftFields,
+      personIds: [jana.id],
+      links: [
+        { url: "https://example.test/a" },
+        { url: "https://example.test/b" },
+        { url: "https://example.test/c" },
+      ],
+    });
+    const [a, , c] = await repository.listGiftLinks(gift.id);
+
+    const saved = await repository.saveGiftWithLinks(
+      gift.id,
+      { name: "Lego Technic", personId: petr.id, buyerPersonId: jana.id },
+      [
+        { id: c.id, url: "https://example.test/c2", title: "Nový název" },
+        { url: "https://example.test/d" },
+        { id: a.id, url: a.url },
+      ],
+    );
+
+    expect(saved).toMatchObject({ id: gift.id, name: "Lego Technic", personId: petr.id, buyerPersonId: jana.id });
+    const links = await repository.listGiftLinks(gift.id);
+    expect(links.map((link) => [link.url, link.title, link.sortOrder])).toEqual([
+      ["https://example.test/c2", "Nový název", 0],
+      ["https://example.test/d", undefined, 1],
+      ["https://example.test/a", undefined, 2],
+    ]);
+    expect(links[0].id).toBe(c.id);
+    expect(links[2].id).toBe(a.id);
+    // The removed link's ID is never reused.
+    expect(links[1].id).toBe(4);
+    expect((await repository.getMetadata()).highestGiftLinkId).toBe(4);
+  });
+
+  it("changes nothing when a link draft refers to another gift's link", async () => {
+    const repository = createRepository();
+    await repository.initialize();
+    const jana = await createPerson(repository, "Jana");
+    const [first, second] = await repository.createGiftsWithLinks({
+      ...giftFields,
+      personIds: [jana.id],
+      links: [{ url: "https://example.test/first" }],
+    }).then(async (created) => [
+      ...created,
+      ...(await repository.createGiftsWithLinks({
+        ...giftFields,
+        personIds: [jana.id],
+        links: [{ url: "https://example.test/second" }],
+      })),
+    ]);
+    const [foreignLink] = await repository.listGiftLinks(second.id);
+
+    await expect(
+      repository.saveGiftWithLinks(first.id, { name: "Přejmenováno" }, [
+        { id: foreignLink.id, url: "https://example.test/stolen" },
+      ]),
+    ).rejects.toThrow("Odkaz nepatří k tomuto dárku.");
+
+    expect(await repository.getGift(first.id)).toMatchObject({ name: "Lego" });
+    expect((await repository.listGiftLinks(first.id)).map((link) => link.url)).toEqual([
+      "https://example.test/first",
+    ]);
+    expect((await repository.listGiftLinks(second.id)).map((link) => link.url)).toEqual([
+      "https://example.test/second",
+    ]);
+  });
+});

@@ -7,6 +7,8 @@ export type Route =
   | { name: "personNew" }
   | { name: "person"; personId: number }
   | { name: "personEdit"; personId: number }
+  | { name: "giftNew"; personId: number }
+  | { name: "giftEdit"; giftId: number }
   | { name: "notFound" };
 
 export const paths = {
@@ -15,19 +17,33 @@ export const paths = {
   personNew: () => "#/osoby/nova",
   person: (personId: number) => `#/osoby/${personId}`,
   personEdit: (personId: number) => `#/osoby/${personId}/upravit`,
+  /** New gift with this person preselected as recipient. */
+  giftNew: (personId: number) => `#/osoby/${personId}/novy-darek`,
+  giftEdit: (giftId: number) => `#/darky/${giftId}`,
 };
+
+function parseId(value: string): number | null {
+  const id = Number(value);
+  return Number.isSafeInteger(id) ? id : null;
+}
 
 export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, "").replace(/\/+$/, "");
   if (path === "") return { name: "people" };
   if (path === "/nastaveni") return { name: "settings" };
   if (path === "/osoby/nova") return { name: "personNew" };
-  const personMatch = /^\/osoby\/([1-9]\d*)(?:\/(upravit))?$/.exec(path);
+  const personMatch = /^\/osoby\/([1-9]\d*)(?:\/(upravit|novy-darek))?$/.exec(path);
   if (personMatch !== null) {
-    const personId = Number(personMatch[1]);
-    if (!Number.isSafeInteger(personId)) return { name: "notFound" };
+    const personId = parseId(personMatch[1]);
+    if (personId === null) return { name: "notFound" };
     if (personMatch[2] === "upravit") return { name: "personEdit", personId };
+    if (personMatch[2] === "novy-darek") return { name: "giftNew", personId };
     return { name: "person", personId };
+  }
+  const giftMatch = /^\/darky\/([1-9]\d*)$/.exec(path);
+  if (giftMatch !== null) {
+    const giftId = parseId(giftMatch[1]);
+    return giftId === null ? { name: "notFound" } : { name: "giftEdit", giftId };
   }
   return { name: "notFound" };
 }

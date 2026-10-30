@@ -66,18 +66,18 @@ The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 - [x] Docs: PRODUCT, DATABASE (incl. backup and import validation), UI, CLAUDE
 - [x] Tests incl. v2 → v3 migration
 
-## Phase 3 — Gifts
+## Phase 3 — Gifts ✅
 
-- [ ] Person detail with gift list
-- [ ] Add gift (multi-recipient → independent records)
-- [ ] Edit gift incl. recipient change
-- [ ] Delete gift with confirmation
-- [ ] Priority (default MEDIUM), stars
-- [ ] Optional buyer
-- [ ] Multiple links (manual title, http/https only, reorder, open externally)
-- [ ] Note
-- [ ] Status; bought and given indicators
-- [ ] Hide given gifts by default
+- [x] Person detail with gift list
+- [x] Add gift (multi-recipient → independent records)
+- [x] Edit gift incl. recipient change
+- [x] Delete gift with confirmation
+- [x] Priority (default MEDIUM), stars
+- [x] Optional buyer
+- [x] Multiple links (manual title, http/https only, reorder, open externally)
+- [x] Note
+- [x] Status; bought and given indicators
+- [x] Hide given gifts by default
 
 ## Phase 4 — Tags, filters, sorting
 
