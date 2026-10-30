@@ -4,7 +4,7 @@ import type { Person } from "../../domain/entities";
 import { formatReminderSummary } from "../../lib/format";
 
 // No window/DOM APIs here: this module also runs in the service worker
-// (Periodic Background Sync, phase 8).
+// (Periodic Background Sync).
 
 export const NOTIFICATION_TITLE = "Narozeniny – GiftList";
 export const NOTIFICATION_TAG = "giftlist-birthdays";

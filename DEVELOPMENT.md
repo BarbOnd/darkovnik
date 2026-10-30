@@ -26,12 +26,11 @@ npm run preview    # serve the production build locally (service worker, offline
 
 ## Dependencies
 
-Installed: React, Vite, TypeScript, ESLint, Vitest, fake-indexeddb, `@dicebear/core` + `@dicebear/styles`, `@dnd-kit/*`, `vite-plugin-pwa` (+ its required peers `workbox-build`, `workbox-window`).
-
-Add when the phase needs them:
-- `@dicebear/core`, `@dicebear/styles` — avatars (style `initial-face`);
-- `vite-plugin-pwa` — service worker and offline shell;
-- `@dnd-kit/core`, `@dnd-kit/sortable` — manual ordering.
+Installed (all free and open source, bundled at build time):
+- React, Vite, TypeScript, ESLint, Vitest, `fake-indexeddb` (tests);
+- `@dicebear/core`, `@dicebear/styles` — avatars (style `initial-face`, CC0);
+- `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`, `@dnd-kit/modifiers` — manual ordering;
+- `vite-plugin-pwa` + its required peers `workbox-build` (build time) and `workbox-window` (registration).
 
 Do not install other libraries without a clear reason and the user's agreement.
 
@@ -77,8 +76,22 @@ High priority:
 - birthday calculation incl. unknown year, 29 February, year boundary, timezones;
 - reminder evaluation: due, relevance window, deduplication via NotificationLog;
 - Czech plural forms;
-- export/import validation;
+- export/import validation; the complete phone-migration flow (`src/db/backup.test.ts`);
+- IndexedDB migrations from every older version (`src/db/migration.test.ts`);
+- photo fields and crop math;
 - persistence after reload; offline CRUD.
+
+## How changes are verified
+
+- Unit and repository tests: `npm test` (tests sit next to the code as `*.test.ts`; IndexedDB via `fake-indexeddb`).
+- UI: check 320 px width in light and dark theme. The user's main test environment is Firefox and VS Code's browser on Windows with **125 % display scaling** — canvas and pixel-size code must also be checked at device pixel ratio 1.25 and 1.5 (a crop-preview bug appeared only there).
+- PWA (service worker, offline, update banner, background check): only in `npm run build` + `npm run preview`, not in `npm run dev`. Offline is verified by stopping the preview server and reloading. Headless Firefox did not complete service-worker installs in automation; headless Edge/Chrome (DevTools protocol) works, and can also dispatch a `periodicsync` event.
+- Things that need a real Android phone (installation, standalone mode, real daily background check, system notifications) are listed as open items in `TODO.md`.
+
+## Windows environment notes
+
+- Do **not** edit text files with Windows PowerShell 5.1 (`Get-Content` / `Set-Content`): it reads UTF-8 without BOM as the ANSI code page and corrupts Czech characters (this happened twice). Use the editor, Claude's Edit/Write tools, or Git Bash `sed`. After scripted edits check for mojibake (`Ă`, `Ä`, `Ĺ`, `â€`) and a BOM (`ef bb bf`).
+- Git warns "LF will be replaced by CRLF" on commit; this is harmless (`core.autocrlf=true`).
 
 ## Data safety
 

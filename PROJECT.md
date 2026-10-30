@@ -30,7 +30,7 @@ Stack: React, TypeScript, Vite, PWA (`vite-plugin-pwa`), IndexedDB, locally bund
 
 ## Privacy
 
-Birthday is personal data stored only in the browser's IndexedDB. Users may use first names, nicknames, initials, or any display name. Exported JSON backups are private files.
+Birthdays and person photos are personal data stored only in the browser's IndexedDB. Users may use first names, nicknames, initials, or any display name. Exported JSON backups are private files.
 
 ## MVP scope
 
@@ -39,18 +39,19 @@ Birthday is personal data stored only in the browser's IndexedDB. Users may use 
 - display name;
 - optional birthday, year may be unknown;
 - deterministic DiceBear Initial Face avatar, manually changeable;
+- optional photo instead of the avatar (circular crop editor, stored locally);
 - alphabetical or manual order.
 
 ### Gifts
 - recipient (changeable), name, links, note, priority (default MEDIUM), tags, optional buyer, one status;
-- `NEW` (no indicator), `BOUGHT` (subtle check), `GIVEN` (hidden by default);
+- `NEW` (no indicator), `BOUGHT` (subtle check), `GIVEN` (hidden by default, listed last);
 - sorted by priority or manually.
 
 ### Multiple recipients
 One gift idea for several recipients creates independent Gift records, one per recipient, with no later synchronization.
 
 ### Quick add
-Recipient(s) → name → save, including creating a new person inline.
+Recipient(s) → name → save, including creating a new person inline. Optional details (buyer, priority, tags, links, note, status) can be filled in a collapsed section before saving.
 
 ### Backup and phone migration
 JSON export (download) / merge import. Phone change: export → transfer file → import into the new empty app. Persistent storage is requested and the app shows when the last backup was made.
@@ -58,7 +59,7 @@ JSON export (download) / merge import. Phone change: export → transfer file �
 ## Birthday reminders
 
 - Upcoming birthdays: today to today + 30 days.
-- Reminders 30 days before and on the day, evaluated whenever the app is opened or shown.
+- Reminders 30 days before and on the day, evaluated whenever the app is opened or shown; on Android an installed app may also be checked roughly daily in the background (Periodic Background Sync, optional, never guaranteed).
 - Missed reminders are summarized in a "Zmeškané připomínky" card.
 - Never claims guaranteed delivery while the app is closed; no remote notification service.
 

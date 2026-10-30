@@ -38,12 +38,15 @@ GiftList
 
 Zmeškané připomínky                    [Zavřít]
 ────────────────
-[ avatar ] Petr — narozeniny před 2 dny
+[ avatar ] Petr
+           narozeniny před 2 dny
 
 Nadcházející narozeniny
 ────────────────
-[ avatar ] Jana — dnes, 31 let
-[ avatar ] Petr — 14. května · za 12 dní
+[ avatar ] Jana                          🎂
+           dnes · 31 let
+[ avatar ] Petr
+           14. května · za 12 dní
 
 Lidé                     [Abecedně ▾]
 ────────────────
@@ -56,7 +59,9 @@ Lidé                     [Abecedně ▾]
 ```
 
 - The "Zmeškané připomínky" card appears only when there is something to show.
-- The sort switch offers "Abecedně" / "Vlastní pořadí"; in "Vlastní pořadí" an "Upravit pořadí" action appears.
+- The sort switch offers "Abecedně" / "Vlastní pořadí"; in "Vlastní pořadí" an "Upravit pořadí" action appears next to "Přidat osobu" below the list.
+- "Nadcházející narozeniny" shows one quiet line when nobody has a birthday in the next 30 days.
+- The floating `+` (bottom right, above the navigation) opens quick add.
 - Do not overload the screen with statistics.
 
 ## Person detail
@@ -64,20 +69,22 @@ Lidé                     [Abecedně ▾]
 ```text
 ← Jana                         [⋯]
 
-[avatar]
-🎂 14. května · za 12 dní
+[avatar nebo fotka]
+🎂 14. května 1990 · za 12 dní · 36 let
 
 Dárky                [Podle priority ▾]
 
 [Aktivní] [Koupeno] [Předáno] [Vše]
-[Vánoce] [Narozeniny] [Výročí]     Zrušit filtry
+[Narozeniny] [Vánoce] [Výročí]
+Zrušit filtry
 
-Kniha                           ★★★
-   Narozeniny
+Kniha
+★★★  Koupí: Petr  [Narozeniny]
 
-Sluchátka                     ✓
-   ★★
+Sluchátka                          ✓
+★★☆
 
+[Upravit pořadí]            (only in Vlastní pořadí)
                                     ( + )
 ```
 
@@ -106,7 +113,7 @@ Fields: Fotka/Avatar, Jméno, Narozeniny (den, měsíc, rok — rok volitelný).
 Three compact fields or selects: Den, Měsíc (Czech month names), Rok (optional). Leaving the year empty means "year unknown". Validate the day against the month (incl. 29 Feb when the year is empty or a leap year).
 
 ### Avatar
-DiceBear `initial-face`, deterministic from `avatarSeed`; the letter is the initial of the current name (PRODUCT.md §16). "Změnit avatara" opens a small grid (e.g. 6–9 variants) from new random seeds, plus "Další varianty". Selecting one saves its seed.
+DiceBear `initial-face`, deterministic from `avatarSeed`; the letter is the initial of the current name (PRODUCT.md §16). "Změnit avatara" (in the person form, only without a photo) opens a dialog with a grid of 9 variants from new random seeds, plus "Další varianty". Selecting one updates the preview; it is saved with "Uložit".
 
 ### Photo
 Picking a file, or "Změnit fotku" on an existing photo (opens with the saved crop), opens the "Upravit výřez fotky" dialog: the image in a square area with a circular frame (outside dimmed), drag to move, pinch / wheel / "Přiblížení" slider to zoom, keyboard arrows and +/−; "Vybrat jinou fotku"; buttons "Zrušit" and "Použít". Next to the avatar preview: "Nahrát fotku" (or "Změnit fotku") and, when a photo exists, "Odebrat fotku" instead of "Změnit avatara". Short hint: the photo stays only on this device and in the backup. Show "Načítám…" while the image is decoded and a Czech error for unsupported files.
@@ -152,28 +159,36 @@ Compact readable chips. Tag management lives in Settings → Štítky: a "Nový 
 Nastavení
 
 Upozornění na narozeniny        [ přepínač ]
-  (případná poznámka o zablokovaných oznámeních)
+  30 dní předem a v den narozenin.
+  (když je zapnuto: stav systémových oznámení,
+   a zda běží kontrola na pozadí — PRODUCT.md §12)
 
 Vzhled         Podle systému / Světlý / Tmavý
 
 Štítky                                    >
 
 Data
-  Exportovat data
-  Importovat data
+  [Exportovat data]
+  [Importovat data]
   Poslední záloha: před 12 dny
   (případná nenápadná připomínka k zálohování)
   (stav trvalého úložiště)
+  (chyba importu / souhrn importu)
 
 O aplikaci (verze)
 ```
 
+Export shows the toast "Záloha stažena". Import of an invalid file shows the Czech error under the buttons; into an installation with data it first opens the "Importovat zálohu?" confirmation (PRODUCT.md §14).
+
 ## Czech plurals
 
-Use `Intl.PluralRules("cs-CZ")` or an equivalent helper for all counts:
-- dárek / dárky / dárků;
-- den / dny / dní ("za 1 den", "za 3 dny", "za 12 dní");
+Use the helper in `src/lib/plural.ts` (`Intl.PluralRules("cs-CZ")`) for all counts:
+- dárek / dárky / dárků; genitive after "u"/"z": dárku / dárků;
+- osoba / osoby / osob; štítek / štítky / štítků; odkaz / odkazy / odkazů;
+- den / dny / dní ("za 2 dny", "za 12 dní"; 1 day reads "zítra", past days "před 3 dny");
 - rok / roky / let (age).
+
+Texts mentioning people stay gender-neutral (e.g. "Jana: narozeniny dnes"), because names do not reliably tell grammatical gender.
 
 ## Buttons and destructive actions
 
@@ -189,4 +204,8 @@ Do not show unnecessary offline warnings. Local-first is intentional.
 
 ## App updates
 
-When a new version of the app is available (service worker update), show a small non-blocking banner "Je dostupná nová verze" with "Načíst znovu".
+When a new version of the app is available (service worker update), show a small non-blocking banner at the top "Je dostupná nová verze" with "Načíst znovu" and a close button. Nothing reloads by itself.
+
+## Toasts
+
+Short confirmations ("Uloženo", "Záloha stažena") appear for ~2.5 s above the bottom navigation, survive navigation, and are announced to screen readers (`role="status"`).

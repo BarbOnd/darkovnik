@@ -10,7 +10,8 @@
 | name | yes | Display name (trimmed, non-empty) |
 | birthday | no | Calendar date of birth; the year may be unknown |
 | avatarSeed | yes | Persistent seed for DiceBear Initial Face |
-| photo | no | Optional photo (square JPEG, stored locally); shown instead of the avatar |
+| photo | no | Optional photo (cropped square JPEG, stored locally); shown instead of the avatar |
+| photoSource, photoCrop | no | Downscaled original and crop position, so the crop can be edited again (set together with `photo`) |
 | sortOrder | yes | Position in the manual people order |
 | createdAt | yes | Creation timestamp |
 | updatedAt | yes | Last modification timestamp |
@@ -24,13 +25,13 @@ The birthday is optional. The user enters day and month, and optionally the year
 
 ### Person actions
 
-- Add
-- Edit (name, birthday, avatar)
+- Add ("Přidat osobu" on the People screen, or "+ Nová osoba" in quick add)
+- Edit in the person form: name, birthday, avatar ("Změnit avatara"), photo (upload, re-crop, replace, remove)
 - Delete
 - Open person's gift list
-- Change avatar
-- Upload, replace, or remove a photo (in the edit form)
 - Reorder (in manual sort mode)
+
+The person detail's `⋯` menu contains only **Upravit** and **Smazat**; avatar and photo are changed in the person form.
 
 Changing name or birthday does not change the avatar seed (colors and face). Only the letter shown in the avatar follows the current name (see §16).
 
@@ -143,7 +144,8 @@ Switch: **Podle priority** (default: HIGH → LOW, then newest first) / **Vlastn
 - "Hotovo" leaves reorder mode; the order is saved immediately after each drop.
 - Keyboard/accessibility fallback: in reorder mode each row also has "Posunout nahoru" / "Posunout dolů" buttons.
 - New people and gifts appear at the top of the manual order.
-- In the gift list, reordering is available only with the filter "Vše" or "Aktivní" without tags, so the user always sees what they are moving.
+- In the gift list, reordering is available only with the filter "Vše" or "Aktivní" without tags, so the user always sees what they are moving. Otherwise a short hint explains this.
+- Given gifts are not part of reorder mode (they are always listed last); hidden or given gifts keep their places in the manual order.
 
 The selected sort modes are remembered on the device.
 
@@ -199,9 +201,13 @@ For each person with a birthday:
 - **DAY** — due on the birthday.
 
 ### When reminders are evaluated
-Browsers/PWAs cannot reliably wake a closed app at an exact time. Therefore the app evaluates reminders **every time it is opened or becomes visible again** (and once a day while it stays open). Delivery while the app is completely closed is never promised.
+Browsers/PWAs cannot reliably wake a closed app at an exact time. Therefore the app evaluates reminders **every time it is opened or becomes visible again**, and re-checks every hour while it stays open (which covers midnight). Delivery while the app is completely closed is never promised.
 
-**Background check (optional enhancement):** where the browser supports Periodic Background Sync (Chrome/Edge on Android, installed app only), the service worker also evaluates reminders roughly once a day while the app is closed and shows the same summarizing notification. The browser decides when (and whether) this runs — not at an exact time, possibly less often or never in battery-saving mode. It uses the same local logic and NotificationLog, needs no server, and data never leaves the device. Settings describe this honestly ("většinou, pokud to telefon dovolí"); evaluation on open remains the baseline.
+**Background check (optional enhancement):** where the browser supports Periodic Background Sync (Chrome/Edge on Android, installed app only), the service worker also evaluates reminders roughly once a day while the app is closed and shows the same summarizing notification. The browser decides when (and whether) this runs — not at an exact time, possibly less often or never in battery-saving mode. It uses the same local logic and NotificationLog, needs no server, and data never leaves the device. The app registers the check only while the setting is on (and removes it when turned off); the browser grants it only to installed apps. Evaluation on open remains the baseline.
+
+Settings show an honest note under the switch (only when it is on):
+- check registered: "Když je aplikace zavřená, telefon ji může zhruba jednou denně probudit a připomínky zkontrolovat. Přesný čas ani doručení zaručit nejde – rozhoduje telefon (např. úspora baterie)."
+- otherwise: "Když je aplikace zavřená, připomínky se zkontrolují až při jejím dalším otevření. Kontrola na pozadí funguje jen v nainstalované aplikaci v Chrome nebo Edge na Androidu."
 
 ### What is shown
 On evaluation, the app finds reminders that are **due (due date ≤ today)**, **not yet shown** on this device (NotificationLog), and **still relevant**:
@@ -209,8 +215,8 @@ On evaluation, the app finds reminders that are **due (due date ≤ today)**, **
 - DAY: relevant until 7 days after the birthday.
 
 For the found reminders:
-1. If notifications are enabled and permitted, show **one** system notification summarizing them (e.g. "Jana má narozeniny za 30 dní · Petr má dnes narozeniny"). Tapping it opens the app.
-2. Show the **Zmeškané připomínky** card on the People screen listing each reminder (avatar, name, "za X dní" / "dnes" / "před X dny", age if known). The card has "Zavřít"; tapping a person opens their detail.
+1. If notifications are enabled and permitted, show **one** system notification titled "Narozeniny – GiftList" summarizing them in gender-neutral form (e.g. "Jana: narozeniny za 30 dní · Petr: narozeniny dnes"). Tapping it opens the app.
+2. Show the **Zmeškané připomínky** card on the People screen listing each reminder (avatar, name, "narozeniny dnes / zítra / za X dní / včera / před X dny", age if known). The card has "Zavřít"; tapping a person opens their detail.
 3. Record each reminder in NotificationLog so it is never shown again.
 
 If the setting is off, nothing is evaluated or recorded.
@@ -234,7 +240,7 @@ Friendly empty states with a next action for: no people, person with no gifts, n
 
 ### Export
 - "Exportovat data" creates a JSON file and **downloads** it as `giftlist-zaloha-YYYY-MM-DD.json` (on Android it goes to Stažené soubory / Downloads).
-- After a successful export, store `lastExportAt`.
+- After a successful export, store `lastExportAt` and show a short toast "Záloha stažena".
 - Settings shows "Poslední záloha: před X dny" or "Zatím nezálohováno".
 - When there is data and the last export is older than 30 days (or never), show a gentle hint on the Settings screen. No pop-ups.
 
@@ -250,7 +256,7 @@ Friendly empty states with a next action for: no people, person with no gifts, n
 Merge rules: see DATABASE.md.
 
 ### Storage persistence
-On first start (and when the user saves the first person), the app calls `navigator.storage.persist()` so the browser does not evict data under storage pressure. Settings shows the result briefly ("Data jsou uložena trvale" / "Prohlížeč může data při nedostatku místa smazat — pravidelně zálohujte").
+On start and after saving a person (harmless when already granted), the app calls `navigator.storage.persist()` so the browser does not evict data under storage pressure. Settings shows the result briefly ("Data jsou uložena trvale" / "Prohlížeč může data při nedostatku místa smazat — pravidelně zálohujte").
 
 ### Other
 - The birthday-notification setting is persistent and included in export/import.
@@ -267,7 +273,7 @@ On first start (and when the user saves the first person), the app calls `naviga
 
 DiceBear 10.x, style `initial-face`, generated locally via `@dicebear/core` and `@dicebear/styles`. Never use the DiceBear HTTP API.
 
-Each person gets an opaque random `avatarSeed` on creation. The same seed always produces the same avatar. "Změnit avatara" shows a small grid of variants generated from new random seeds; selecting one saves its seed. The seed is never derived from personal data.
+Each person gets an opaque random `avatarSeed` on creation. The same seed always produces the same avatar. "Změnit avatara" in the person form shows a grid of 9 variants generated from new random seeds plus "Další varianty"; the chosen seed is saved with the form. The seed is never derived from personal data.
 
 Initial Face draws a letter as the mouth and would derive it from the seed. Because the seed is random, the app instead shows the first letter of the person's **current display name** (computed at render time, never stored). Colors and the face come only from the seed.
 

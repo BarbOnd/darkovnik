@@ -15,6 +15,7 @@ The Markdown files in this repository are the product and technical specificatio
 | `UI.md` | Screens, interactions, design |
 | `DEVELOPMENT.md` | Workflow, commands, definition of done |
 | `TODO.md` | **The only phase plan.** Current progress and next steps |
+| `README.md`, `SETUP.md` | Overview and quick start (summaries of the files above) |
 
 Before implementing a substantial change:
 1. Read `TODO.md` and find the current phase.
@@ -73,6 +74,7 @@ npm dependencies are allowed because they are bundled at build time.
 - Accessible semantic controls; clear confirmations for destructive actions.
 - Mobile first: test narrow layouts (320 px) first. Support light and dark theme.
 - System fonts and locally bundled assets only.
+- Never edit text files with Windows PowerShell 5.1 `Get-Content`/`Set-Content` — it corrupts Czech UTF-8 text (see DEVELOPMENT.md → Windows environment notes).
 
 ## ID integrity is critical
 
@@ -96,13 +98,15 @@ GiftTag associations have no own ID; they are identified by the `giftId` + `tagI
 
 ## Person deletion
 
-Requires confirmation that warns when the person is a buyer on other people's gifts. On confirm: delete the person, their gifts and those gifts' links/tag associations; set `buyerPersonId = null` on other gifts where they were buyer; never delete those other gifts.
+Requires confirmation that warns when the person is a buyer on other people's gifts. On confirm: delete the person, their gifts and those gifts' links/tag associations, and the person's NotificationLog entries; set `buyerPersonId = null` on other gifts where they were buyer; never delete those other gifts.
 
 ## Avatar
 
 DiceBear 10.x, style `initial-face`, generated locally via `@dicebear/core` + `@dicebear/styles`. Never call the DiceBear HTTP API.
 
-Each person has an opaque random `avatarSeed` created on person creation. Never derive it from name, birthday, or other personal data. Changing name or birthday does not change the seed. "Změnit avatara" picks another seed and saves it. The letter in the avatar is the initial of the current name, injected at render time (never stored, never part of the seed) — see PRODUCT.md §16.
+Each person has an opaque random `avatarSeed` created on person creation. Never derive it from name, birthday, or other personal data. Changing name or birthday does not change the seed. "Změnit avatara" (person form only) picks another seed and saves it with the form. The letter in the avatar is the initial of the current name, injected at render time (never stored, never part of the seed) — see PRODUCT.md §16.
+
+An optional person photo (with its downscaled source and crop) replaces the avatar everywhere; it is processed and stored only locally and included in the user's backup. Removing it shows the avatar from the unchanged seed again.
 
 ## Birthday reminders
 

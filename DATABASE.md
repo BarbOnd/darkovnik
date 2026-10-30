@@ -139,7 +139,9 @@ Indexes:
 The `metadata` store holds one application record:
 
 ```text
-- schemaVersion: number
+- key: "app"                   // the single record's key
+- schemaVersion: number        // IndexedDB schema version (currently 4); NOT the backup file version
+- initializationComplete: boolean   // set when the default tags were created on first start
 - highestPersonId: number
 - highestGiftId: number
 - highestTagId: number
@@ -168,7 +170,7 @@ NotificationLog
 - shownAt: string          // ISO-8601
 ```
 
-NotificationLog is device-local and is **not** exported. Entries older than one year may be removed.
+NotificationLog is device-local and is **not** exported. Recording reminders is atomic: only keys not yet present are recorded and shown (so two open windows or the background check never show one reminder twice); entries of deleted people are skipped. Entries older than about one year (366 days) are removed when new reminders are recorded.
 
 ## Sorting
 
@@ -215,9 +217,15 @@ Tag names are unique, compared case-insensitively using the trimmed name convert
 
 ## GiftLink order
 
-`sortOrder` is a unique non-negative integer within one gift. When links are created, reordered, or removed, store their order consecutively as `0..n-1`.
+`sortOrder` is a unique non-negative integer within one gift. When links are created, reordered, or removed, store their order consecutively as `0..n-1`. Link titles are trimmed; an empty title is not stored.
+
+## Write transactions
+
+Every multi-step write (create gifts for several recipients with links and tags, save a gift with its links and tags, delete a person, import) runs in **one** IndexedDB transaction. References are checked before the first write, and any error aborts the transaction, so nothing is written partially.
 
 ## Backup schema
+
+The backup file has its own format version `schemaVersion: 1`, independent of the IndexedDB version. A file with a higher version is refused ("Záloha pochází z novější verze aplikace…").
 
 ```json
 {
@@ -265,6 +273,8 @@ Validate the complete import document **and** the resulting merged dataset befor
 - tag-name uniqueness.
 
 If validation fails, write nothing.
+
+Unknown fields in the file are dropped; missing photo fields of a person are treated as null. The merge is planned once for the confirmation ("preview", read-only) and computed again **inside the write transaction**, validated there, and only then written.
 
 Counters after import: maximum of the local counter, the imported counter, and all IDs present in the resulting dataset.
 

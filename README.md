@@ -1,23 +1,20 @@
 # GiftList 🎁
 
-Personal, mobile-first gift idea manager (PWA).
+Personal, mobile-first gift idea manager (PWA). All data stays on the device.
 
-## MVP
+## Features (MVP)
 
-- Manage people, alphabetical or manual order
-- Optional birthdays (year may be unknown), stored locally
-- DiceBear Initial Face avatars generated locally, manually changeable
-- Add gifts for one or multiple people (independent record per recipient)
-- Quick add incl. creating a new person
+- People: name, optional birthday (year may be unknown), alphabetical or manual order
+- Avatar: DiceBear Initial Face generated locally, or an optional photo with a circular crop editor
+- Gifts for one or several people (an independent record per recipient)
+- Quick add (`+`) incl. creating a new person, with optional details
 - Links, notes, priority, tags, optional buyer, changeable recipient
-- Track bought gifts, hide given gifts by default
-- Filter by status (Aktivní / Koupeno / Předáno / Vše) and tags with AND logic
-- Sort gifts by priority or manually
-- Upcoming birthdays (today + 30 days)
-- Birthday reminders when the app is opened, with a summary of missed ones
+- Status Nápad / Koupeno / Předáno; given gifts hidden by default and listed last
+- Filters by status (Aktivní / Koupeno / Předáno / Vše) and tags with AND logic
+- Sorting by priority or manually (drag handle or up/down buttons)
+- Upcoming birthdays (today … +30 days) and birthday reminders: checked when the app is opened; optionally roughly daily in the background on Android (never guaranteed)
 - Light and dark theme
-- Export (download) and merge import, last-backup indicator
-- Restore to a new phone via export/import
+- Export (download) and merge import; restore to a new phone via export/import
 - Works offline, installable on Android
 
 ## Not in MVP
@@ -26,16 +23,25 @@ Accounts, login, cloud database, cloud sync, analytics, tracking, AI API, paid s
 
 ## Zero cost & privacy
 
-Hosted on GitHub Pages (GitHub Free). No API keys. All data stays in the browser on the device; exported JSON files are private.
+Hosted on GitHub Pages (GitHub Free). No API keys. All data (incl. birthdays and photos) stays in the browser on the device; exported JSON files are private.
 
 ## Development
 
 ```bash
 npm install
-npm run dev
+npm run dev        # development server (no service worker)
+npm run lint
+npm test
+npm run build      # type check + production build
+npm run preview    # production build incl. service worker / offline
 ```
 
-Documentation:
-- `CLAUDE.md` — rules for Claude (read first)
-- `TODO.md` — phase plan and progress
-- `PROJECT.md`, `PRODUCT.md`, `DATABASE.md`, `ARCHITECTURE.md`, `UI.md`, `DEVELOPMENT.md`, `SETUP.md`
+Documentation (`CLAUDE.md` first):
+- `CLAUDE.md` — rules for Claude
+- `TODO.md` — the only phase plan and current progress
+- `PROJECT.md` — purpose, principles, scope
+- `PRODUCT.md` — functional behavior
+- `DATABASE.md` — data model, migrations, backup and import rules
+- `ARCHITECTURE.md` — technology, code structure, PWA
+- `UI.md` — screens and interactions
+- `DEVELOPMENT.md` — workflow, testing, environment notes

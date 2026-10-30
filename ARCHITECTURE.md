@@ -22,7 +22,7 @@ The UI must not access IndexedDB directly. A small repository abstraction keeps 
 ## Technology
 
 ### Vite
-Build tool and development server. For GitHub Pages, `base` in `vite.config.ts` must be set to `/<repository-name>/` (set in the release phase; the manifest `start_url` and `scope` must be relative so they follow `base`).
+Build tool and development server. For GitHub Pages, `base` in `vite.config.ts` must be set to `/<repository-name>/` (set in the release phase, phase 9; the manifest `id`, `start_url`, and `scope` are already relative so they follow `base`).
 
 ### React
 UI and component model.
@@ -43,6 +43,8 @@ The service worker (`src/sw/sw.ts`, own `tsconfig.sw.json` with the WebWorker li
 
 ### IndexedDB
 Persistent application data. Do not use localStorage as the primary database. The current implementation uses the native IndexedDB API with a small promise wrapper; Dexie is not needed unless it materially simplifies future work.
+
+Multi-step writes run in one readwrite transaction. New code uses the repository's `inTransaction` helper, which aborts the transaction on any error; some older methods (e.g. `deletePerson`) open the transaction themselves and check everything before the first write. Either way nothing is written partially (see DATABASE.md → Write transactions). Schema changes bump `DATABASE_VERSION` and add a migration step in `database.ts` with a test that opens a frozen older database (`migration.test.ts`).
 
 Call `navigator.storage.persist()` to request persistent storage (see PRODUCT.md §14).
 
@@ -73,8 +75,26 @@ src/
 ├── domain/
 ├── lib/
 ├── styles/
+├── sw/
 └── types/
 ```
+
+What lives where:
+- `app/` — `App.tsx` (start, theme, bottom navigation, toast, reminders), `AppContext.ts` (`useApp()`: repository, metadata, `updatePreferences`, `reloadMetadata`, `showToast`, missed reminders), `routes.ts` (hash routes `#/…`, `navigate`, `goBack`, `replaceRoute`), `theme.ts`, `UpdateBanner.tsx` (service-worker registration, update banner, background-check sync);
+- `components/` — shared UI: `Dialog` (native `<dialog>`), `ScreenHeader`, `Link`, `PersonAvatar`, `ReorderList` (`@dnd-kit`), `QuickAddButton`, icons;
+- `features/<area>/` — screens and their helpers (people, gifts, tags, notifications, settings);
+- `db/` — IndexedDB schema and migrations (`database.ts`), the repository (`repository.ts`), metadata defaults;
+- `domain/` — entity types and pure logic: birthdays, reminders due, sorting, filters, links, photo crop math, backup validation and merge;
+- `lib/` — small browser helpers: avatar rendering, photo decoding, plurals, formatting, `useLoad`, storage persistence, download;
+- `sw/sw.ts` — the service worker (separate `tsconfig.sw.json`, WebWorker types);
+- `types/` — ambient type declarations (Periodic Background Sync).
+
+Conventions:
+- Screens get data through `useApp().repository` and `useLoad(loader)`; there is no global store.
+- Navigation uses hash routes so GitHub Pages needs no server rewrites; after saving, screens return with `goBack(fallback)` so the Android back button does not revisit forms.
+- Repository methods validate input and throw Czech `Error` messages meant for the user; raw IndexedDB errors (`DOMException`) get a generic Czech message in the UI.
+- Code shared with the service worker (`features/notifications/evaluate.ts`, `db/`, `domain/`) must not use `window` or DOM APIs.
+- Tests sit next to the code (`*.test.ts`), IndexedDB is tested with `fake-indexeddb`.
 
 The exact structure may be adjusted if it stays simple and coherent.
 
@@ -102,13 +122,13 @@ Before any write: parse safely, validate the document and the merged result (sch
 ## Birthday reminders
 
 No reliable exact-time background scheduling exists for PWAs on Android without a push server. Therefore:
-- reminders are evaluated on app start, on `visibilitychange` to visible, and once a day while open;
+- reminders are evaluated on app start, on `visibilitychange` to visible, and hourly while open;
 - system notifications are shown via `ServiceWorkerRegistration.showNotification()` (falls back to `new Notification()` where needed) when permission is granted;
 - shown reminders are recorded in the `notificationLog` store;
 - no Push API server, Firebase, OneSignal, cron, or other backend;
 - the UI never claims delivery while the app is closed.
 
-Periodic Background Sync is used as an optional enhancement where supported (phase 8): the service worker registers a daily `periodicsync` tag and runs the same pure reminder logic against IndexedDB, recording shown reminders in `notificationLog`. It must never be required; unsupported browsers keep evaluation on open. No server, push service, or secret is involved.
+Periodic Background Sync is used as an optional enhancement where supported: while the setting is on, the app registers the `giftlist-birthday-reminders` tag (`minInterval` one day, `features/notifications/backgroundCheck.ts`) and unregisters it when the setting is off; the service worker handles `periodicsync` by running the same reminder logic (`features/notifications/evaluate.ts`) against IndexedDB and recording shown reminders in `notificationLog`. It must never be required; unsupported browsers keep evaluation on open. No server, push service, or secret is involved.
 
 ## Error handling
 
@@ -124,4 +144,4 @@ Core runtime must not depend on an external HTTP API. Do not use remote fonts, C
 
 ## Backup and future synchronization
 
-MVP implements only JSON export/import. A new phone is restored by importing a complete export into an empty installation. The repository abstraction leaves room for future synchronization; do not implement cloud sync, accounts, background sync, or conflict resolution in MVP.
+MVP implements only JSON export/import. A new phone is restored by importing a complete export into an empty installation. The repository abstraction leaves room for future synchronization; do not implement cloud sync, accounts, background data synchronization between devices, or conflict resolution in MVP. (The local Periodic Background Sync reminder check above is not data synchronization: nothing leaves the device.)
