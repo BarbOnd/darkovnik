@@ -278,6 +278,64 @@ describe("people", () => {
     await expect(repository.updatePerson(999, { name: "X" })).rejects.toThrow("Osoba neexistuje.");
   });
 
+  it("stores, re-crops and removes a photo with its source and crop, without touching the avatar seed", async () => {
+    const repository = createRepository();
+    await repository.initialize();
+    const photoFields = {
+      photo: "data:image/jpeg;base64,/9j/4AAQSkZJRg==",
+      photoSource: "data:image/jpeg;base64,/9j/4BBQSkZJRg==",
+      photoCrop: { zoom: 1.5, dx: 0.1, dy: -0.05 },
+    };
+    const noPhoto = { photo: null, photoSource: null, photoCrop: null };
+
+    const withoutPhoto = await createPerson(repository, "Jana");
+    expect(withoutPhoto).toMatchObject(noPhoto);
+
+    const withPhoto = await repository.createPerson({
+      name: "Petr",
+      birthday: null,
+      avatarSeed: "seed-petr",
+      ...photoFields,
+    });
+    expect(await repository.getPerson(withPhoto.id)).toMatchObject({ ...photoFields, avatarSeed: "seed-petr" });
+
+    const renamed = await repository.updatePerson(withPhoto.id, { name: "Petr K." });
+    expect(renamed).toMatchObject(photoFields);
+
+    const recropped = { ...photoFields, photo: "data:image/jpeg;base64,/9j/4CCQ", photoCrop: { zoom: 3, dx: 0, dy: 0 } };
+    expect(await repository.updatePerson(withPhoto.id, recropped)).toMatchObject(recropped);
+
+    const removed = await repository.updatePerson(withPhoto.id, noPhoto);
+    expect(removed).toMatchObject({ ...noPhoto, avatarSeed: "seed-petr" });
+
+    const invalid = "Fotka má nepodporovaný formát nebo je příliš velká.";
+    await expect(
+      repository.updatePerson(withoutPhoto.id, { ...photoFields, photo: "https://example.test/foto.jpg" }),
+    ).rejects.toThrow(invalid);
+    await expect(repository.updatePerson(withoutPhoto.id, { photo: photoFields.photo })).rejects.toThrow(invalid);
+    await expect(repository.updatePerson(withPhoto.id, { photo: null })).rejects.toThrow(invalid);
+    await expect(
+      repository.createPerson({
+        name: "Eva",
+        birthday: null,
+        avatarSeed: "seed-eva",
+        ...photoFields,
+        photo: "data:image/svg+xml;base64,PHN2Zz4=",
+      }),
+    ).rejects.toThrow(invalid);
+    await expect(
+      repository.createPerson({
+        name: "Eva",
+        birthday: null,
+        avatarSeed: "seed-eva",
+        ...photoFields,
+        photoCrop: { zoom: 9, dx: 0, dy: 0 },
+      }),
+    ).rejects.toThrow(invalid);
+    expect(await repository.listPeople()).toHaveLength(2);
+    expect(await repository.getPerson(withoutPhoto.id)).toMatchObject(noPhoto);
+  });
+
   it("reorders people and requires every person exactly once", async () => {
     const repository = createRepository();
     await repository.initialize();

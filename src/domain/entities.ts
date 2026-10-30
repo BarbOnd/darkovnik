@@ -1,4 +1,6 @@
-export const GIFT_PRIORITIES = ["LOW", "MEDIUM", "HIGH"] as const;
+import type { CropView } from "./photo";
+
+export const GIFT_PRIORITIES =["LOW", "MEDIUM", "HIGH"] as const;
 export type GiftPriority = (typeof GIFT_PRIORITIES)[number];
 
 export const GIFT_STATUSES = ["NEW", "BOUGHT", "GIVEN"] as const;
@@ -26,6 +28,12 @@ export type Person = {
   /** "YYYY-MM-DD", or "--MM-DD" when the year is unknown. */
   birthday: string | null;
   avatarSeed: string;
+  /** Cropped square JPEG `data:` URL shown instead of the avatar, or null. */
+  photo: string | null;
+  /** Downscaled original JPEG `data:` URL for re-editing the crop; null without photo. */
+  photoSource: string | null;
+  /** Crop position within photoSource; null without photo. */
+  photoCrop: CropView | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

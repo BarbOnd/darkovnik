@@ -3,7 +3,18 @@ import type { Gift, Person } from "./entities";
 import { sortGifts, sortPeople } from "./sorting";
 
 function person(id: number, name: string, sortOrder: number): Person {
-  return { id, name, birthday: null, avatarSeed: "x", sortOrder, createdAt: "", updatedAt: "" };
+  return {
+    id,
+    name,
+    birthday: null,
+    avatarSeed: "x",
+    photo: null,
+    photoSource: null,
+    photoCrop: null,
+    sortOrder,
+    createdAt: "",
+    updatedAt: "",
+  };
 }
 
 function gift(id: number, priority: Gift["priority"], createdAt: string, sortOrder: number): Gift {

@@ -70,7 +70,7 @@ export function PeopleScreen() {
                 {sortPeople(overview.data.people, metadata.peopleSortMode).map((person) => (
                   <li key={person.id}>
                     <Link className="person-row" href={paths.person(person.id)}>
-                      <PersonAvatar seed={person.avatarSeed} name={person.name} />
+                      <PersonAvatar seed={person.avatarSeed} name={person.name} photo={person.photo} />
                       <span className="person-row__text">
                         <span className="person-row__name">{person.name}</span>
                         <span className="person-row__meta">

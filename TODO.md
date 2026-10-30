@@ -54,6 +54,18 @@ The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 - [x] Empty state
 - [x] Verify no personal data is used as avatar seed
 
+## Phase 2b — Person photo ✅
+
+- [x] `Person.photo` (JPEG data URL or null), IndexedDB version 3 migration (`photo: null`)
+- [x] Validate photo format and size in the repository
+- [x] Photo upload in the person form (Android: camera or gallery), resized/cropped locally to 256×256 JPEG
+- [x] Circular crop editor: move (drag, arrows) and zoom (pinch, wheel, slider, +/−) before saving
+- [x] Store the downscaled source photo and crop (IndexedDB version 4); "Změnit fotku" reopens the editor with the saved crop; "Vybrat jinou fotku" in the editor
+- [x] Remove photo; the DiceBear avatar (unchanged seed) is shown again
+- [x] Photo shown instead of the avatar everywhere
+- [x] Docs: PRODUCT, DATABASE (incl. backup and import validation), UI, CLAUDE
+- [x] Tests incl. v2 → v3 migration
+
 ## Phase 3 — Gifts
 
 - [ ] Person detail with gift list

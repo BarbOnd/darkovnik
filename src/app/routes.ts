@@ -7,7 +7,6 @@ export type Route =
   | { name: "personNew" }
   | { name: "person"; personId: number }
   | { name: "personEdit"; personId: number }
-  | { name: "personAvatar"; personId: number }
   | { name: "notFound" };
 
 export const paths = {
@@ -16,7 +15,6 @@ export const paths = {
   personNew: () => "#/osoby/nova",
   person: (personId: number) => `#/osoby/${personId}`,
   personEdit: (personId: number) => `#/osoby/${personId}/upravit`,
-  personAvatar: (personId: number) => `#/osoby/${personId}/avatar`,
 };
 
 export function parseRoute(hash: string): Route {
@@ -24,12 +22,11 @@ export function parseRoute(hash: string): Route {
   if (path === "") return { name: "people" };
   if (path === "/nastaveni") return { name: "settings" };
   if (path === "/osoby/nova") return { name: "personNew" };
-  const personMatch = /^\/osoby\/([1-9]\d*)(?:\/(upravit|avatar))?$/.exec(path);
+  const personMatch = /^\/osoby\/([1-9]\d*)(?:\/(upravit))?$/.exec(path);
   if (personMatch !== null) {
     const personId = Number(personMatch[1]);
     if (!Number.isSafeInteger(personId)) return { name: "notFound" };
     if (personMatch[2] === "upravit") return { name: "personEdit", personId };
-    if (personMatch[2] === "avatar") return { name: "personAvatar", personId };
     return { name: "person", personId };
   }
   return { name: "notFound" };

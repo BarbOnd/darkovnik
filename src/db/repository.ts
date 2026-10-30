@@ -13,6 +13,7 @@ import {
   type Person,
   type Tag,
 } from "../domain/entities";
+import { photoFieldsError, type PersonPhotoFields } from "../domain/photo";
 import { compareBySortOrder } from "../domain/sorting";
 import {
   ALL_STORE_NAMES,
@@ -37,8 +38,14 @@ const DEFAULT_TAG_NAMES = ["Vánoce", "Narozeniny", "Výročí"] as const;
 
 type CounterName = "people" | "gifts" | "tags" | "giftLinks";
 
-export type CreatePersonInput = Pick<Person, "name" | "birthday" | "avatarSeed">;
-export type UpdatePersonInput = Partial<CreatePersonInput>;
+/** Photo fields are optional (no photo); when given, all three must be given together. */
+export type CreatePersonInput = Pick<Person, "name" | "birthday" | "avatarSeed"> & PersonPhotoFields;
+/**
+ * Omitted fields stay unchanged. Photo fields change together: all three set,
+ * or all three null to remove the photo.
+ */
+export type UpdatePersonInput = Partial<Pick<Person, "name" | "birthday" | "avatarSeed">> &
+  PersonPhotoFields;
 export type CreateGiftInput = Pick<
   Gift,
   "personId" | "name" | "note" | "priority" | "status" | "buyerPersonId"
@@ -137,6 +144,11 @@ function assertBirthday(birthday: string | null): void {
   if (birthday !== null && !isValidBirthday(birthday)) {
     throw new Error("Datum narozenin není platné.");
   }
+}
+
+function assertPhotoFields(fields: PersonPhotoFields): void {
+  const error = photoFieldsError(fields);
+  if (error !== null) throw new Error(error);
 }
 
 function assertGiftFields(input: UpdateGiftInput): void {
@@ -426,6 +438,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       assertNonEmpty(input.name, "Jméno");
       assertBirthday(input.birthday);
       assertNonEmpty(input.avatarSeed, "Avatar seed");
+      assertPhotoFields(input);
       const db = await connection();
       const transaction = db.transaction([STORE_NAMES.people, STORE_NAMES.metadata], "readwrite");
       const done = transactionDone(transaction);
@@ -439,6 +452,9 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
         name: input.name.trim(),
         birthday: input.birthday,
         avatarSeed: input.avatarSeed,
+        photo: input.photo ?? null,
+        photoSource: input.photoSource ?? null,
+        photoCrop: input.photoCrop ?? null,
         sortOrder: 0,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -455,6 +471,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       if (input.name !== undefined) assertNonEmpty(input.name, "Jméno");
       if (input.birthday !== undefined) assertBirthday(input.birthday);
       if (input.avatarSeed !== undefined) assertNonEmpty(input.avatarSeed, "Avatar seed");
+      assertPhotoFields(input);
       const db = await connection();
       const transaction = db.transaction(STORE_NAMES.people, "readwrite");
       const done = transactionDone(transaction);
@@ -465,6 +482,12 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
         name: input.name?.trim() ?? person.name,
         birthday: input.birthday !== undefined ? input.birthday : person.birthday,
         avatarSeed: input.avatarSeed ?? person.avatarSeed,
+        // Validated above: the three photo fields are either all given or all omitted.
+        ...(input.photo !== undefined && {
+          photo: input.photo,
+          photoSource: input.photoSource ?? null,
+          photoCrop: input.photoCrop ?? null,
+        }),
         updatedAt: now().toISOString(),
       };
       peopleStore.put(updated);

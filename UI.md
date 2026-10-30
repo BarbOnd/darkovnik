@@ -81,7 +81,7 @@ Sluchátka                     ✓
                                     ( + )
 ```
 
-- The `⋯` menu contains: Upravit, Změnit avatara, Smazat.
+- The `⋯` menu contains: Upravit, Smazat. Avatar and photo are changed only in the person form (Upravit).
 - Status chips are single-select; tag chips are multi-select; selected chips are visually distinct.
 - "Zrušit filtry" appears only when filters differ from the default (Aktivní, no tags).
 - Given gifts are hidden unless "Předáno" or "Vše" is selected.
@@ -96,13 +96,16 @@ Sluchátka                     ✓
 
 ## Person editing
 
-Fields: Jméno, Narozeniny (den, měsíc, rok — rok volitelný), Avatar.
+Fields: Fotka/Avatar, Jméno, Narozeniny (den, měsíc, rok — rok volitelný).
 
 ### Birthday input
 Three compact fields or selects: Den, Měsíc (Czech month names), Rok (optional). Leaving the year empty means "year unknown". Validate the day against the month (incl. 29 Feb when the year is empty or a leap year).
 
 ### Avatar
 DiceBear `initial-face`, deterministic from `avatarSeed`; the letter is the initial of the current name (PRODUCT.md §16). "Změnit avatara" opens a small grid (e.g. 6–9 variants) from new random seeds, plus "Další varianty". Selecting one saves its seed.
+
+### Photo
+Picking a file, or "Změnit fotku" on an existing photo (opens with the saved crop), opens the "Upravit výřez fotky" dialog: the image in a square area with a circular frame (outside dimmed), drag to move, pinch / wheel / "Přiblížení" slider to zoom, keyboard arrows and +/−; "Vybrat jinou fotku"; buttons "Zrušit" and "Použít". Next to the avatar preview: "Nahrát fotku" (or "Změnit fotku") and, when a photo exists, "Odebrat fotku" instead of "Změnit avatara". Short hint: the photo stays only on this device and in the backup. Show "Načítám…" while the image is decoded and a Czech error for unsupported files.
 
 ## Gift form
 

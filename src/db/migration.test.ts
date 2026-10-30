@@ -75,7 +75,7 @@ function createVersion1Database(): Promise<void> {
   });
 }
 
-describe("IndexedDB migration v1 → v2", () => {
+describe("IndexedDB migration v1 → current", () => {
   it("backfills sortOrder, adds metadata defaults and notificationLog, keeps all data", async () => {
     await createVersion1Database();
 
@@ -87,7 +87,13 @@ describe("IndexedDB migration v1 → v2", () => {
     expect(orderByName).toEqual(["Adam", "Cyril", "Čeněk", "Zuzana"]);
     people.forEach((person) => {
       const original = v1People.find((p) => p.id === person.id);
-      expect(person).toEqual({ ...original, sortOrder: person.sortOrder });
+      expect(person).toEqual({
+        ...original,
+        photo: null,
+        photoSource: null,
+        photoCrop: null,
+        sortOrder: person.sortOrder,
+      });
     });
 
     const giftsOfZuzana = await repository.listGiftsByPerson(1);
@@ -104,7 +110,7 @@ describe("IndexedDB migration v1 → v2", () => {
     expect((await repository.listTags()).map((tag) => tag.name)).toEqual(["Narozeniny"]);
 
     expect(await repository.getMetadata()).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 4,
       highestPersonId: 6,
       highestGiftId: 9,
       highestTagId: 3,
@@ -118,7 +124,7 @@ describe("IndexedDB migration v1 → v2", () => {
     });
 
     const database = await openGiftListDatabase(DATABASE_NAME);
-    expect(database.version).toBe(2);
+    expect(database.version).toBe(4);
     const transaction = database.transaction(STORE_NAMES.notificationLog, "readonly");
     expect([...transaction.objectStore(STORE_NAMES.notificationLog).indexNames]).toEqual(["personId"]);
     database.close();
@@ -132,5 +138,107 @@ describe("IndexedDB migration v1 → v2", () => {
     const person = await repository.createPerson({ name: "Nová", birthday: null, avatarSeed: "n" });
     expect(person.id).toBe(7);
     expect(person.sortOrder).toBe(0);
+  });
+});
+
+const v2People = [
+  { id: 1, name: "Jana", birthday: "--05-14", avatarSeed: "s1", sortOrder: 1 },
+  { id: 3, name: "Petr", birthday: null, avatarSeed: "s3", sortOrder: 0 },
+].map((person) => ({ ...person, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-02T00:00:00.000Z" }));
+
+const v2Metadata = {
+  key: "app",
+  schemaVersion: 2,
+  highestPersonId: 3,
+  highestGiftId: 0,
+  highestTagId: 3,
+  highestGiftLinkId: 0,
+  birthdayNotificationsEnabled: false,
+  lastExportAt: "2026-01-05T10:00:00.000Z",
+  peopleSortMode: "MANUAL",
+  giftSortMode: "PRIORITY",
+  theme: "DARK",
+  initializationComplete: true,
+};
+
+/**
+ * Creates a version 2 or 3 database (both have the same stores; version 3 only
+ * added `Person.photo`) with frozen data, independent of the current code.
+ */
+function createVersion2Or3Database(
+  version: 2 | 3,
+  peopleRecords: object[] = v2People,
+  metadataRecord: object = v2Metadata,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE_NAME, version);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      const people = db.createObjectStore("people", { keyPath: "id" });
+      const gifts = db.createObjectStore("gifts", { keyPath: "id" });
+      const giftLinks = db.createObjectStore("giftLinks", { keyPath: "id" });
+      db.createObjectStore("tags", { keyPath: "id" });
+      const giftTags = db.createObjectStore("giftTags", { keyPath: ["giftId", "tagId"] });
+      const metadata = db.createObjectStore("metadata", { keyPath: "key" });
+      const notificationLog = db.createObjectStore("notificationLog", { keyPath: "key" });
+      gifts.createIndex("personId", "personId");
+      gifts.createIndex("status", "status");
+      gifts.createIndex("buyerPersonId", "buyerPersonId");
+      giftLinks.createIndex("giftId", "giftId");
+      giftTags.createIndex("giftId", "giftId");
+      giftTags.createIndex("tagId", "tagId");
+      notificationLog.createIndex("personId", "personId");
+
+      peopleRecords.forEach((person) => people.put(person));
+      metadata.put(metadataRecord);
+    };
+    request.onsuccess = () => {
+      request.result.close();
+      resolve();
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+describe("IndexedDB migration v2 → current", () => {
+  it("adds photo: null to every person and keeps all other data and preferences", async () => {
+    await createVersion2Or3Database(2);
+
+    repository = createGiftListRepository({ databaseName: DATABASE_NAME });
+    await repository.initialize();
+
+    const people = await repository.listPeople();
+    expect(people).toEqual(
+      v2People.map((person) => ({ ...person, photo: null, photoSource: null, photoCrop: null })),
+    );
+
+    // toEqual ignores the undefined `key`, which getMetadata() does not return.
+    expect(await repository.getMetadata()).toEqual({ ...v2Metadata, key: undefined, schemaVersion: 4 });
+  });
+});
+
+describe("IndexedDB migration v3 → v4", () => {
+  it("makes an existing photo its own source with the initial crop", async () => {
+    const photo = "data:image/jpeg;base64,/9j/4AAQSkZJRg==";
+    const v3People = [
+      { ...v2People[0], photo },
+      { ...v2People[1], photo: null },
+    ];
+    await createVersion2Or3Database(3, v3People, { ...v2Metadata, schemaVersion: 3 });
+
+    repository = createGiftListRepository({ databaseName: DATABASE_NAME });
+    await repository.initialize();
+
+    expect(await repository.getPerson(v3People[0].id)).toEqual({
+      ...v3People[0],
+      photoSource: photo,
+      photoCrop: { zoom: 1, dx: 0, dy: 0 },
+    });
+    expect(await repository.getPerson(v3People[1].id)).toEqual({
+      ...v3People[1],
+      photoSource: null,
+      photoCrop: null,
+    });
+    expect((await repository.getMetadata()).schemaVersion).toBe(4);
   });
 });

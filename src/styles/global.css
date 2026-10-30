@@ -387,6 +387,10 @@ select[aria-invalid="true"] {
   background: var(--color-surface-muted);
 }
 
+.avatar--photo {
+  object-fit: cover;
+}
+
 /* Person detail */
 
 .person-detail {
@@ -494,6 +498,76 @@ select[aria-invalid="true"] {
   align-items: center;
   gap: var(--space);
   flex-wrap: wrap;
+}
+
+.avatar-field__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.avatar-field__hint {
+  flex-basis: 100%;
+}
+
+.file-button {
+  cursor: pointer;
+}
+
+.file-button[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.file-button:has(input:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Photo crop editor */
+
+.photo-crop {
+  position: relative;
+  width: min(240px, 100%);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: #000000;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.photo-crop:active {
+  cursor: grabbing;
+}
+
+.photo-crop__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.photo-crop__circle {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgb(255 255 255 / 85%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px rgb(0 0 0 / 55%);
+  pointer-events: none;
+}
+
+.photo-crop__help {
+  text-align: center;
+}
+
+.photo-crop__zoom {
+  min-height: var(--touch);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--color-accent);
 }
 
 .birthday-input__row {

@@ -8,7 +8,6 @@ import {
   type AppMetadata,
   type UpdatePreferencesInput,
 } from "../db/repository";
-import { ChangeAvatarScreen } from "../features/people/ChangeAvatarScreen";
 import { PeopleScreen } from "../features/people/PeopleScreen";
 import { PersonDetailScreen } from "../features/people/PersonDetailScreen";
 import { EditPersonScreen, NewPersonScreen } from "../features/people/PersonFormScreen";
@@ -31,8 +30,6 @@ function Screen({ route }: { route: Route }) {
       return <PersonDetailScreen key={route.personId} personId={route.personId} />;
     case "personEdit":
       return <EditPersonScreen key={route.personId} personId={route.personId} />;
-    case "personAvatar":
-      return <ChangeAvatarScreen key={route.personId} personId={route.personId} />;
     case "notFound":
       return (
         <>

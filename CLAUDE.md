@@ -110,7 +110,7 @@ Use only free browser/PWA capabilities. Never add Firebase, OneSignal, a server,
 
 ## Privacy
 
-No account, backend, analytics, tracking, or remote services. Display names may be nicknames or initials. Export files are private user data. Never commit personal data, exported backups, secrets, or credentials.
+No account, backend, analytics, tracking, or remote services. Person photos stay local (IndexedDB and the user's own backup file). Display names may be nicknames or initials. Export files are private user data. Never commit personal data, exported backups, secrets, or credentials.
 
 ## Phase-by-phase workflow
 

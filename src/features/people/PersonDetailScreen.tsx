@@ -12,11 +12,8 @@ import { formatBirthdayCs } from "../../lib/format";
 import { useLoad } from "../../lib/useLoad";
 import { personDeletionText } from "./deletionText";
 
-function PersonMenu({ onEdit, onChangeAvatar, onDelete }: {
-  onEdit(): void;
-  onChangeAvatar(): void;
-  onDelete(): void;
-}) {
+/** Avatar and photo are changed in "Upravit" (person form), not from this menu. */
+function PersonMenu({ onEdit, onDelete }: { onEdit(): void; onDelete(): void }) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,11 +56,6 @@ function PersonMenu({ onEdit, onChangeAvatar, onDelete }: {
           <li>
             <button type="button" className="menu__item" onClick={() => choose(onEdit)}>
               Upravit
-            </button>
-          </li>
-          <li>
-            <button type="button" className="menu__item" onClick={() => choose(onChangeAvatar)}>
-              Změnit avatara
             </button>
           </li>
           <li>
@@ -139,7 +131,6 @@ export function PersonDetailScreen({ personId }: { personId: number }) {
           person !== undefined && (
             <PersonMenu
               onEdit={() => navigate(paths.personEdit(person.id))}
-              onChangeAvatar={() => navigate(paths.personAvatar(person.id))}
               onDelete={() => {
                 setActionError(false);
                 repository
@@ -160,7 +151,7 @@ export function PersonDetailScreen({ personId }: { personId: number }) {
 
       {person !== undefined && (
         <section className="person-detail">
-          <PersonAvatar seed={person.avatarSeed} name={person.name} size={96} />
+          <PersonAvatar seed={person.avatarSeed} name={person.name} photo={person.photo} size={96} />
           {person.birthday !== null && (
             <p className="person-detail__birthday">
               <CakeIcon className="inline-icon" />

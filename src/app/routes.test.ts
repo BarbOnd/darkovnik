@@ -10,7 +10,7 @@ describe("routes", () => {
     ["#/osoby/12", { name: "person", personId: 12 }],
     ["#/osoby/12/", { name: "person", personId: 12 }],
     ["#/osoby/12/upravit", { name: "personEdit", personId: 12 }],
-    ["#/osoby/12/avatar", { name: "personAvatar", personId: 12 }],
+    ["#/osoby/12/avatar", { name: "notFound" }],
     ["#/osoby/0", { name: "notFound" }],
     ["#/osoby/abc", { name: "notFound" }],
     ["#/osoby/99999999999999999999", { name: "notFound" }],
@@ -20,7 +20,6 @@ describe("routes", () => {
   it("builds paths that parse back", () => {
     expect(parseRoute(paths.person(3))).toEqual({ name: "person", personId: 3 });
     expect(parseRoute(paths.personEdit(3))).toEqual({ name: "personEdit", personId: 3 });
-    expect(parseRoute(paths.personAvatar(3))).toEqual({ name: "personAvatar", personId: 3 });
     expect(parseRoute(paths.settings())).toEqual({ name: "settings" });
   });
 });

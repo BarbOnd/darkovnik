@@ -12,10 +12,16 @@ type DialogProps = {
 export function Dialog({ title, onClose, children, footer }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const pressedOnBackdrop = useRef(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (dialog !== null && !dialog.open) dialog.showModal();
+    if (dialog !== null && !dialog.open) {
+      dialog.showModal();
+      // Start on the title instead of the first control (no stray focus ring, title is announced).
+      titleRef.current?.focus();
+    }
     return () => dialog?.close();
   }, []);
 
@@ -28,12 +34,16 @@ export function Dialog({ title, onClose, children, footer }: DialogProps) {
         event.preventDefault();
         onClose();
       }}
+      onPointerDown={(event) => {
+        pressedOnBackdrop.current = event.target === dialogRef.current;
+      }}
       onClick={(event) => {
-        if (event.target === dialogRef.current) onClose();
+        // A drag that starts inside and ends on the backdrop must not close the dialog.
+        if (event.target === dialogRef.current && pressedOnBackdrop.current) onClose();
       }}
     >
       <div className="dialog__body">
-        <h2 id={titleId} className="dialog__title">
+        <h2 id={titleId} ref={titleRef} className="dialog__title" tabIndex={-1}>
           {title}
         </h2>
         {children}

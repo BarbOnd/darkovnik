@@ -12,6 +12,9 @@ Person
 - name: string                  // trimmed, non-empty
 - birthday: string | null       // "YYYY-MM-DD" or "--MM-DD" (year unknown)
 - avatarSeed: string
+- photo: string | null          // cropped square 256×256 JPEG "data:image/jpeg;base64,…" URL, or null
+- photoSource: string | null    // downscaled original JPEG data URL (shorter side ≤ 1024 px) for re-editing
+- photoCrop: { zoom, dx, dy } | null  // crop position in photoSource, viewport units (zoom 1–4)
 - sortOrder: number             // manual order among people
 - createdAt: string             // ISO-8601
 - updatedAt: string             // ISO-8601
@@ -20,6 +23,8 @@ Person
 `birthday` is a calendar date, not a timestamp. When the year is unknown, it is stored in the ISO 8601 partial form `--MM-DD` (e.g. `--05-14`). Such a person takes part in upcoming birthdays and reminders, but no age is shown.
 
 `avatarSeed` is an opaque seed for DiceBear Initial Face and must not contain personal data.
+
+`photo`, `photoSource`, and `photoCrop` are either all set or all null.
 
 ### Gift
 
@@ -231,7 +236,7 @@ Tag names are unique, compared case-insensitively using the trimmed name convert
 }
 ```
 
-Exported Person and Gift records include `sortOrder`.
+Exported Person and Gift records include `sortOrder`. Person records include `photo`, `photoSource`, and `photoCrop` (or nulls), so photos and their crop move to a new phone with the backup.
 
 File name: `giftlist-zaloha-YYYY-MM-DD.json` (local date).
 
@@ -252,6 +257,7 @@ Validate the complete import document **and** the resulting merged dataset befor
 - required fields, field types, enum values;
 - IDs are positive safe integers;
 - birthday format (`YYYY-MM-DD` valid date, or `--MM-DD` valid month/day incl. `--02-29`);
+- photo fields: all null, or all set — `photo` a base64 `data:image/jpeg|png|webp` URL of at most 300 000 characters, `photoSource` the same of at most 1 500 000 characters, `photoCrop` with `zoom` 1–4 and finite `dx`, `dy`;
 - HTTP/HTTPS URLs;
 - referential integrity;
 - tag-name uniqueness.
@@ -274,9 +280,15 @@ Treat a 29 February birthday as 28 February in a non-leap year.
 
 ## Schema migrations
 
-The current IndexedDB version is **2**. The migration from version 1 (which had no `sortOrder`, metadata preferences, or `notificationLog`):
+The current IndexedDB version is **4**.
+
+The migration from version 1 to 2 (version 1 had no `sortOrder`, metadata preferences, or `notificationLog`):
 - backfills `Person.sortOrder` by name (cs-CZ);
 - backfills `Gift.sortOrder` per recipient by the PRIORITY order;
 - adds the new metadata fields with defaults;
 - creates `notificationLog`;
 - keeps all existing data.
+
+The migration from version 2 to 3 adds `photo: null` to every existing person and keeps all other data and preferences.
+
+The migration from version 3 to 4 sets `photoSource` and `photoCrop`: an existing photo becomes its own source with the initial crop (`zoom 1`, centered); people without a photo get nulls.

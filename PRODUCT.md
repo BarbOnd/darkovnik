@@ -10,6 +10,7 @@
 | name | yes | Display name (trimmed, non-empty) |
 | birthday | no | Calendar date of birth; the year may be unknown |
 | avatarSeed | yes | Persistent seed for DiceBear Initial Face |
+| photo | no | Optional photo (square JPEG, stored locally); shown instead of the avatar |
 | sortOrder | yes | Position in the manual people order |
 | createdAt | yes | Creation timestamp |
 | updatedAt | yes | Last modification timestamp |
@@ -28,6 +29,7 @@ The birthday is optional. The user enters day and month, and optionally the year
 - Delete
 - Open person's gift list
 - Change avatar
+- Upload, replace, or remove a photo (in the edit form)
 - Reorder (in manual sort mode)
 
 Changing name or birthday does not change the avatar seed (colors and face). Only the letter shown in the avatar follows the current name (see §16).
@@ -262,13 +264,17 @@ Each person gets an opaque random `avatarSeed` on creation. The same seed always
 
 Initial Face draws a letter as the mouth and would derive it from the seed. Because the seed is random, the app instead shows the first letter of the person's **current display name** (computed at render time, never stored). Colors and the face come only from the seed.
 
+### Photo
+
+A person may have an optional photo instead of the avatar. "Nahrát fotku" in the person form opens the system picker (on Android: camera or gallery). The user then positions the photo in a circular crop editor (drag to move; pinch, mouse wheel, or the "Přiblížení" slider to zoom 1–4×; arrow keys and +/− on a keyboard). The image always covers the whole circle. "Použít" renders the visible square at 256 × 256 px as JPEG locally in the browser and stores it in IndexedDB; it is never uploaded anywhere. Besides the cropped result, a downscaled original (shorter side 1024 px) and the crop position are stored, so "Změnit fotku" reopens the editor exactly where the user left off; the editor also offers "Vybrat jinou fotku". When a photo exists, it is shown everywhere instead of the avatar and "Změnit avatara" is not offered. "Odebrat fotku" removes it and the avatar from the unchanged seed is shown again. Photos are included in the backup.
+
 ## 17. Future sharing
 
 Not in MVP. Recipient-specific Gift records are intentionally independent so future sharing can expose only one person's records.
 
 ## 18. Privacy and zero cost
 
-Birthday is personal data and is stored only locally. Display names may be first names, nicknames, or initials. Exported JSON is private. No runtime external service is required.
+Birthday and photos are personal data and are stored only locally. Display names may be first names, nicknames, or initials. Exported JSON is private. No runtime external service is required.
 
 ## 19. Backup versus synchronization
 

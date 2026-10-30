@@ -1,10 +1,11 @@
 import type { Gift, Person } from "../domain/entities";
+import { INITIAL_CROP_VIEW } from "../domain/photo";
 import { compareGiftsByPriority, comparePeopleByName } from "../domain/sorting";
 import { requestResult } from "./idb";
 import { DEFAULT_V2_PREFERENCES, METADATA_KEY, type MetadataRecord } from "./metadata";
 
 export const DATABASE_NAME = "giftlist";
-export const DATABASE_VERSION = 2;
+export const DATABASE_VERSION = 4;
 
 export const STORE_NAMES = {
   people: "people",
@@ -47,7 +48,9 @@ async function migrateToVersion2(database: IDBDatabase, transaction: IDBTransact
   notificationLog.createIndex("personId", "personId");
 
   const peopleStore = transaction.objectStore(STORE_NAMES.people);
-  const people = await requestResult(peopleStore.getAll() as IDBRequest<Omit<Person, "sortOrder">[]>);
+  const people = await requestResult(
+    peopleStore.getAll() as IDBRequest<Omit<Person, "sortOrder" | "photo">[]>,
+  );
   people
     .sort(comparePeopleByName)
     .forEach((person, index) => peopleStore.put({ ...person, sortOrder: index }));
@@ -75,6 +78,43 @@ async function migrateToVersion2(database: IDBDatabase, transaction: IDBTransact
   }
 }
 
+/** Version 3: optional person photo (`photo: null` for existing people). */
+async function migrateToVersion3(transaction: IDBTransaction): Promise<void> {
+  const peopleStore = transaction.objectStore(STORE_NAMES.people);
+  const people = await requestResult(peopleStore.getAll() as IDBRequest<Omit<Person, "photo">[]>);
+  people.forEach((person) => peopleStore.put({ ...person, photo: null }));
+
+  const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+  const metadata = await requestResult(
+    metadataStore.get(METADATA_KEY) as IDBRequest<MetadataRecord | undefined>,
+  );
+  if (metadata !== undefined) metadataStore.put({ ...metadata, schemaVersion: 3 });
+}
+
+/**
+ * Version 4: photo source and crop for re-editing. An existing photo becomes
+ * its own source with the initial crop (it shows exactly the stored square).
+ */
+async function migrateToVersion4(transaction: IDBTransaction): Promise<void> {
+  const peopleStore = transaction.objectStore(STORE_NAMES.people);
+  const people = await requestResult(
+    peopleStore.getAll() as IDBRequest<Omit<Person, "photoSource" | "photoCrop">[]>,
+  );
+  people.forEach((person) =>
+    peopleStore.put({
+      ...person,
+      photoSource: person.photo,
+      photoCrop: person.photo === null ? null : INITIAL_CROP_VIEW,
+    }),
+  );
+
+  const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+  const metadata = await requestResult(
+    metadataStore.get(METADATA_KEY) as IDBRequest<MetadataRecord | undefined>,
+  );
+  if (metadata !== undefined) metadataStore.put({ ...metadata, schemaVersion: 4 });
+}
+
 export function openGiftListDatabase(name = DATABASE_NAME): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(name, DATABASE_VERSION);
@@ -87,6 +127,8 @@ export function openGiftListDatabase(name = DATABASE_NAME): Promise<IDBDatabase>
       const runMigrations = async () => {
         if (event.oldVersion < 1) createVersion1Schema(database);
         if (event.oldVersion < 2) await migrateToVersion2(database, upgradeTransaction);
+        if (event.oldVersion < 3) await migrateToVersion3(upgradeTransaction);
+        if (event.oldVersion < 4) await migrateToVersion4(upgradeTransaction);
       };
       runMigrations().catch(() => {
         try {
