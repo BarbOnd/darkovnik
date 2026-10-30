@@ -37,7 +37,9 @@ The application must:
 - cache the application shell for offline use;
 - work correctly after installation.
 
-Use `vite-plugin-pwa` (open source, Workbox-based) with `registerType: "prompt"`: when a new version is available, the UI offers "Načíst znovu" instead of reloading silently.
+Use `vite-plugin-pwa` with `strategies: "injectManifest"` and `registerType: "prompt"`: when a new version is available, the UI offers "Načíst znovu" instead of reloading silently.
+
+The service worker (`src/sw/sw.ts`, own `tsconfig.sw.json` with the WebWorker lib) is written without Workbox runtime libraries: it precaches the build file list injected by the plugin (duplicates removed, fetched with `cache: "reload"`), serves `index.html` for navigations (hash routing → offline app shell), matches cached files with `ignoreVary`, activates a waiting version on a `SKIP_WAITING` message, handles `periodicsync` for birthday reminders and opens the app on `notificationclick`. `workbox-build` (build time) and `workbox-window` (registration) are required peers of the plugin. The manifest (relative `id`, `start_url`, `scope`; PNG icons 192/512 plus maskable variants) is generated from `vite.config.ts`. Test PWA behavior with `npm run build && npm run preview`; the dev server has no service worker.
 
 ### IndexedDB
 Persistent application data. Do not use localStorage as the primary database. The current implementation uses the native IndexedDB API with a small promise wrapper; Dexie is not needed unless it materially simplifies future work.

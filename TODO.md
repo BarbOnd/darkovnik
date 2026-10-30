@@ -130,13 +130,13 @@ The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 
 ## Phase 8 — PWA and offline
 
-- [ ] `vite-plugin-pwa`, service worker, offline app shell
-- [ ] Update banner "Je dostupná nová verze" (registerType prompt)
-- [ ] Periodic Background Sync for birthday reminders (optional; Chromium Android, installed app), shared reminder logic, honest note in Settings
-- [ ] Maskable icon, manifest with relative `start_url`/`scope`
-- [ ] Test installation on Android, standalone mode
-- [ ] Test offline CRUD and persistence after restart
-- [ ] Verify no runtime external API is required
+- [x] `vite-plugin-pwa`, service worker, offline app shell
+- [x] Update banner "Je dostupná nová verze" (registerType prompt)
+- [x] Periodic Background Sync for birthday reminders (optional; Chromium Android, installed app), shared reminder logic, honest note in Settings (verified by dispatching periodicsync in Edge; real daily wake-up on Android pending)
+- [x] Maskable icon, manifest with relative `start_url`/`scope`
+- [ ] Test installation on Android, standalone mode (needs a device; after phase 9 on HTTPS)
+- [x] Test offline CRUD and persistence after restart (desktop Edge with the server stopped: reload, deep link, data kept; repeat on Android)
+- [x] Verify no runtime external API is required
 
 ## Phase 9 — Release
 

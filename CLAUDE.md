@@ -65,7 +65,7 @@ npm dependencies are allowed because they are bundled at build time.
 
 - Prefer the smallest coherent implementation.
 - Do not rewrite unrelated files.
-- Do not add large dependencies without a clear reason. Allowed when needed: `vite-plugin-pwa`, `@dicebear/core`, `@dicebear/styles`, `@dnd-kit/*` (manual ordering). Anything else: ask first.
+- Do not add large dependencies without a clear reason. Allowed when needed: `vite-plugin-pwa` (with its required peers `workbox-build`, `workbox-window`), `@dicebear/core`, `@dicebear/styles`, `@dnd-kit/*` (manual ordering). Anything else: ask first.
 - Do not create mock functionality that looks production-ready.
 - Keep UI, domain/application logic, and persistence separated. The UI must not access IndexedDB directly.
 - Preserve existing user data when changing storage structures; use IndexedDB version upgrades with migrations.

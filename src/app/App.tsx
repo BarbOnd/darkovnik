@@ -20,6 +20,7 @@ import { requestPersistentStorage } from "../lib/storage";
 import { AppContext, type AppContextValue } from "./AppContext";
 import { paths, useRoute, type Route } from "./routes";
 import { applyTheme } from "./theme";
+import { UpdateBanner } from "./UpdateBanner";
 
 const TOAST_DURATION_MS = 2500;
 
@@ -172,6 +173,7 @@ export function App() {
           </p>
         )}
       </div>
+      <UpdateBanner remindersEnabled={remindersEnabled} />
       <BottomNav route={route} />
     </div>
   );

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GiftListRepository } from "../../db/repository";
 import { localDateOf, type DueReminder } from "../../domain/birthdays";
 import type { Person } from "../../domain/entities";
-import { evaluateReminders, reminderNotificationBody, showSystemNotification } from "./reminders";
+import { evaluateReminders, reminderNotificationBody } from "./evaluate";
+import { showSystemNotification } from "./reminders";
 
 /** While the app stays open, reminders are re-checked this often (covers midnight). */
 const RECHECK_INTERVAL_MS = 60 * 60 * 1000;

@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it } from "vitest";
 import { deleteGiftListDatabase } from "../../db/database";
 import { createGiftListRepository, type GiftListRepository } from "../../db/repository";
-import { evaluateReminders, reminderNotificationBody } from "./reminders";
+import { evaluateReminders, reminderNotificationBody } from "./evaluate";
 
 const DATABASE_NAME = "giftlist-reminders-test";
 let repository: GiftListRepository | undefined;

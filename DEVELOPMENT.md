@@ -21,12 +21,12 @@ npm run lint       # ESLint
 npm test           # Vitest (single run)
 npm run test:watch # Vitest watch mode
 npm run build      # TypeScript check + production build
-npm run preview    # serve the production build locally
+npm run preview    # serve the production build locally (service worker, offline, update banner)
 ```
 
 ## Dependencies
 
-Installed: React, Vite, TypeScript, ESLint, Vitest, fake-indexeddb.
+Installed: React, Vite, TypeScript, ESLint, Vitest, fake-indexeddb, `@dicebear/core` + `@dicebear/styles`, `@dnd-kit/*`, `vite-plugin-pwa` (+ its required peers `workbox-build`, `workbox-window`).
 
 Add when the phase needs them:
 - `@dicebear/core`, `@dicebear/styles` — avatars (style `initial-face`);
