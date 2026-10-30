@@ -6,6 +6,7 @@ describe("routes", () => {
     ["", { name: "people" }],
     ["#/", { name: "people" }],
     ["#/nastaveni", { name: "settings" }],
+    ["#/nastaveni/stitky", { name: "tags" }],
     ["#/osoby/nova", { name: "personNew" }],
     ["#/osoby/12", { name: "person", personId: 12 }],
     ["#/osoby/12/", { name: "person", personId: 12 }],

@@ -590,10 +590,10 @@ describe("tags", () => {
     });
 
     await expect(repository.renameTag(christmas.id, "narozeniny")).rejects.toThrow(
-      "Tag s tímto názvem už existuje.",
+      "Štítek s tímto názvem už existuje.",
     );
     await expect(repository.renameTag(christmas.id, " ")).rejects.toThrow();
-    await expect(repository.renameTag(999, "Nový")).rejects.toThrow("Tag neexistuje.");
+    await expect(repository.renameTag(999, "Nový")).rejects.toThrow("Štítek neexistuje.");
   });
 
   it("sets the exact set of tags for a gift", async () => {
@@ -610,7 +610,7 @@ describe("tags", () => {
     expect(await repository.listGiftTagIds(gift.id)).toEqual([]);
 
     await repository.setGiftTags(gift.id, [1]);
-    await expect(repository.setGiftTags(gift.id, [2, 999])).rejects.toThrow("Tag neexistuje.");
+    await expect(repository.setGiftTags(gift.id, [2, 999])).rejects.toThrow("Štítek neexistuje.");
     expect(await repository.listGiftTagIds(gift.id)).toEqual([1]);
   });
 });
@@ -902,6 +902,65 @@ describe("gifts with links (gift form)", () => {
     // The removed link's ID is never reused.
     expect(links[1].id).toBe(4);
     expect((await repository.getMetadata()).highestGiftLinkId).toBe(4);
+  });
+
+  it("saves tags together with the gift: every recipient gets the tags, editing replaces them", async () => {
+    const repository = createRepository();
+    await repository.initialize();
+    const jana = await createPerson(repository, "Jana");
+    const petr = await createPerson(repository, "Petr");
+    const [christmas, birthday, anniversary] = await repository.listTags();
+
+    const [forJana, forPetr] = await repository.createGiftsWithLinks({
+      ...giftFields,
+      personIds: [jana.id, petr.id],
+      links: [],
+      tagIds: [christmas.id, birthday.id],
+    });
+    expect(await repository.listGiftTagIds(forJana.id)).toEqual([christmas.id, birthday.id]);
+    expect(await repository.listGiftTagIds(forPetr.id)).toEqual([christmas.id, birthday.id]);
+
+    await repository.saveGiftWithLinks(forJana.id, {}, [], [anniversary.id]);
+    expect(await repository.listGiftTagIds(forJana.id)).toEqual([anniversary.id]);
+    expect(await repository.listGiftTagIds(forPetr.id)).toEqual([christmas.id, birthday.id]);
+
+    // Without tagIds the tags stay unchanged.
+    await repository.saveGiftWithLinks(forJana.id, { name: "Jiný název" }, []);
+    expect(await repository.listGiftTagIds(forJana.id)).toEqual([anniversary.id]);
+
+    expect(
+      (await repository.listAllGiftTags())
+        .map((association) => [association.giftId, association.tagId])
+        .sort((a, b) => a[0] - b[0] || a[1] - b[1]),
+    ).toEqual([
+      [forJana.id, anniversary.id],
+      [forPetr.id, christmas.id],
+      [forPetr.id, birthday.id],
+    ]);
+  });
+
+  it("writes nothing when a tag does not exist", async () => {
+    const repository = createRepository();
+    await repository.initialize();
+    const jana = await createPerson(repository, "Jana");
+
+    await expect(
+      repository.createGiftsWithLinks({ ...giftFields, personIds: [jana.id], links: [], tagIds: [1, 999] }),
+    ).rejects.toThrow("Štítek neexistuje.");
+    expect(await repository.listGifts()).toEqual([]);
+
+    const [gift] = await repository.createGiftsWithLinks({
+      ...giftFields,
+      personIds: [jana.id],
+      links: [{ url: "https://example.test/a" }],
+      tagIds: [1],
+    });
+    await expect(
+      repository.saveGiftWithLinks(gift.id, { name: "Změna" }, [], [2, 999]),
+    ).rejects.toThrow("Štítek neexistuje.");
+    expect(await repository.getGift(gift.id)).toMatchObject({ name: "Lego" });
+    expect(await repository.listGiftLinks(gift.id)).toHaveLength(1);
+    expect(await repository.listGiftTagIds(gift.id)).toEqual([1]);
   });
 
   it("changes nothing when a link draft refers to another gift's link", async () => {

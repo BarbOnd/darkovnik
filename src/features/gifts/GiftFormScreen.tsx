@@ -13,8 +13,9 @@ import {
   type GiftPriority,
   type GiftStatus,
   type Person,
+  type Tag,
 } from "../../domain/entities";
-import { comparePeopleByName } from "../../domain/sorting";
+import { comparePeopleByName, compareTagsByName } from "../../domain/sorting";
 import { useLoad } from "../../lib/useLoad";
 import { LinksEditor } from "./LinksEditor";
 import { PRIORITY_LABELS, STATUS_LABELS } from "./labels";
@@ -31,6 +32,7 @@ type GiftFormValues = {
   status: GiftStatus;
   buyerPersonId: number | null;
   links: LinkRow[];
+  tagIds: number[];
 };
 
 type GiftFormSubmit = Omit<GiftFormValues, "links" | "name" | "note"> & {
@@ -43,6 +45,7 @@ type GiftFormProps = {
   /** "new": several recipients create independent gifts; "edit": exactly one recipient. */
   mode: "new" | "edit";
   people: Person[];
+  tags: Tag[];
   initial: GiftFormValues;
   submitLabel: string;
   cancelFallback: string;
@@ -52,7 +55,7 @@ type GiftFormProps = {
 
 type FormError = { field: "recipients" | "name" | "links" | "save"; message: string; rowKey?: string };
 
-function GiftForm({ mode, people, initial, submitLabel, cancelFallback, onSubmit, onDelete }: GiftFormProps) {
+function GiftForm({ mode, people, tags, initial, submitLabel, cancelFallback, onSubmit, onDelete }: GiftFormProps) {
   const id = useId();
   const [values, setValues] = useState(initial);
   const [error, setError] = useState<FormError | null>(null);
@@ -201,6 +204,33 @@ function GiftForm({ mode, people, initial, submitLabel, cancelFallback, onSubmit
             </div>
           </fieldset>
 
+          <fieldset className="field">
+            <legend className="field__label">Štítky</legend>
+            {tags.length === 0 ? (
+              <p className="field__hint">Zatím nemáte žádné štítky. Vytvoříte je v Nastavení → Štítky.</p>
+            ) : (
+              <div className="chip-group">
+                {tags.map((tag) => (
+                  <label key={tag.id} className="chip">
+                    <input
+                      type="checkbox"
+                      checked={values.tagIds.includes(tag.id)}
+                      onChange={() =>
+                        set(
+                          "tagIds",
+                          values.tagIds.includes(tag.id)
+                            ? values.tagIds.filter((other) => other !== tag.id)
+                            : [...values.tagIds, tag.id],
+                        )
+                      }
+                    />
+                    <span className="chip__body chip__body--text">{tag.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </fieldset>
+
           <LinksEditor
             rows={values.links}
             onChange={(links) => set("links", links)}
@@ -268,22 +298,27 @@ function GiftForm({ mode, people, initial, submitLabel, cancelFallback, onSubmit
 
 export function NewGiftScreen({ personId }: { personId: number }) {
   const { repository } = useApp();
-  const load = useCallback(() => repository.listPeople(), [repository]);
-  const people = useLoad(load);
-  const recipientExists = people.status === "ready" && people.data.some((person) => person.id === personId);
+  const load = useCallback(async () => {
+    const [people, tags] = await Promise.all([repository.listPeople(), repository.listTags()]);
+    return { people, tags: [...tags].sort(compareTagsByName) };
+  }, [repository]);
+  const options = useLoad(load);
+  const recipientExists =
+    options.status === "ready" && options.data.people.some((person) => person.id === personId);
 
   return (
     <>
       <ScreenHeader title="Nový dárek" backFallback={paths.person(personId)} />
-      {people.status === "loading" && <StatusMessage kind="loading" />}
-      {people.status === "error" && <StatusMessage kind="error" message="Seznam lidí se nepodařilo načíst." />}
-      {people.status === "ready" && !recipientExists && (
+      {options.status === "loading" && <StatusMessage kind="loading" />}
+      {options.status === "error" && <StatusMessage kind="error" message="Seznam lidí se nepodařilo načíst." />}
+      {options.status === "ready" && !recipientExists && (
         <StatusMessage kind="error" message="Tato osoba neexistuje. Možná byla smazána." />
       )}
-      {people.status === "ready" && recipientExists && (
+      {options.status === "ready" && recipientExists && (
         <GiftForm
           mode="new"
-          people={people.data}
+          people={options.data.people}
+          tags={options.data.tags}
           initial={{
             recipientIds: [personId],
             name: "",
@@ -292,6 +327,7 @@ export function NewGiftScreen({ personId }: { personId: number }) {
             status: "NEW",
             buyerPersonId: null,
             links: [],
+            tagIds: [],
           }}
           submitLabel="Přidat dárek"
           cancelFallback={paths.person(personId)}
@@ -349,8 +385,13 @@ export function EditGiftScreen({ giftId }: { giftId: number }) {
   const load = useCallback(async () => {
     const gift = await repository.getGift(giftId);
     if (gift === undefined) return undefined;
-    const [links, people] = await Promise.all([repository.listGiftLinks(giftId), repository.listPeople()]);
-    return { gift, links, people };
+    const [links, people, tags, tagIds] = await Promise.all([
+      repository.listGiftLinks(giftId),
+      repository.listPeople(),
+      repository.listTags(),
+      repository.listGiftTagIds(giftId),
+    ]);
+    return { gift, links, people, tags: [...tags].sort(compareTagsByName), tagIds };
   }, [repository, giftId]);
   const result = useLoad(load);
   const data = result.status === "ready" ? result.data : undefined;
@@ -370,6 +411,7 @@ export function EditGiftScreen({ giftId }: { giftId: number }) {
         <GiftForm
           mode="edit"
           people={data.people}
+          tags={data.tags}
           initial={{
             recipientIds: [data.gift.personId],
             name: data.gift.name,
@@ -378,11 +420,12 @@ export function EditGiftScreen({ giftId }: { giftId: number }) {
             status: data.gift.status,
             buyerPersonId: data.gift.buyerPersonId,
             links: linkRowsFrom(data.links),
+            tagIds: data.tagIds,
           }}
           submitLabel="Uložit"
           cancelFallback={paths.person(data.gift.personId)}
-          onSubmit={async ({ recipientIds, links, ...fields }) => {
-            await repository.saveGiftWithLinks(giftId, { ...fields, personId: recipientIds[0] }, links);
+          onSubmit={async ({ recipientIds, links, tagIds, ...fields }) => {
+            await repository.saveGiftWithLinks(giftId, { ...fields, personId: recipientIds[0] }, links, tagIds);
             goBack(paths.person(data.gift.personId));
           }}
           onDelete={() => setDeleting(true)}

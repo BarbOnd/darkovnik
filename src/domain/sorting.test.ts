@@ -1,6 +1,28 @@
 import { describe, expect, it } from "vitest";
 import type { Gift, Person } from "./entities";
-import { sortGifts, sortPeople } from "./sorting";
+import { givenLast, reorderSubset, sortGifts, sortPeople } from "./sorting";
+
+describe("givenLast", () => {
+  it("moves given gifts to the end and keeps the order inside both groups", () => {
+    const list = [
+      { id: 1, status: "GIVEN" as const },
+      { id: 2, status: "NEW" as const },
+      { id: 3, status: "GIVEN" as const },
+      { id: 4, status: "BOUGHT" as const },
+    ];
+    expect(givenLast(list).map((gift) => gift.id)).toEqual([2, 4, 1, 3]);
+  });
+});
+
+describe("reorderSubset", () => {
+  it("keeps hidden items in place and fills visible slots in the new order", () => {
+    // 9 is hidden (e.g. a given gift under the "Aktivní" filter).
+    expect(reorderSubset([1, 9, 2, 3], [3, 1, 2])).toEqual([3, 9, 1, 2]);
+    expect(reorderSubset([9, 1, 2], [2, 1])).toEqual([9, 2, 1]);
+    expect(reorderSubset([1, 2, 3], [3, 2, 1])).toEqual([3, 2, 1]);
+    expect(reorderSubset([1, 2], [1, 2])).toEqual([1, 2]);
+  });
+});
 
 function person(id: number, name: string, sortOrder: number): Person {
   return {

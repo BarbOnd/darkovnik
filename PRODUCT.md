@@ -135,7 +135,7 @@ Status and tags combine with **AND**:
 Switch: **Abecedně** (default) / **Vlastní pořadí**.
 
 ### Gift list (per person)
-Switch: **Podle priority** (default: HIGH → LOW, then newest first) / **Vlastní pořadí**.
+Switch: **Podle priority** (default: HIGH → LOW, then newest first) / **Vlastní pořadí**. In both modes, given (Předáno) gifts are always shown last.
 
 ### Manual ordering
 - In "Vlastní pořadí", an "Upravit pořadí" action enters reorder mode.

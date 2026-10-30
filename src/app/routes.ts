@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 export type Route =
   | { name: "people" }
   | { name: "settings" }
+  | { name: "tags" }
   | { name: "personNew" }
   | { name: "person"; personId: number }
   | { name: "personEdit"; personId: number }
@@ -14,6 +15,7 @@ export type Route =
 export const paths = {
   people: () => "#/",
   settings: () => "#/nastaveni",
+  tags: () => "#/nastaveni/stitky",
   personNew: () => "#/osoby/nova",
   person: (personId: number) => `#/osoby/${personId}`,
   personEdit: (personId: number) => `#/osoby/${personId}/upravit`,
@@ -31,6 +33,7 @@ export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, "").replace(/\/+$/, "");
   if (path === "") return { name: "people" };
   if (path === "/nastaveni") return { name: "settings" };
+  if (path === "/nastaveni/stitky") return { name: "tags" };
   if (path === "/osoby/nova") return { name: "personNew" };
   const personMatch = /^\/osoby\/([1-9]\d*)(?:\/(upravit|novy-darek))?$/.exec(path);
   if (personMatch !== null) {

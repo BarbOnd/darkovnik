@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { version } from "../../../package.json";
 import { useApp } from "../../app/AppContext";
+import { paths } from "../../app/routes";
+import { Link } from "../../components/Link";
+import { ChevronIcon } from "../../components/icons";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import type { Theme } from "../../domain/entities";
@@ -41,6 +44,13 @@ export function SettingsScreen() {
           </div>
         </fieldset>
         {failed && <StatusMessage kind="error" message="Nastavení se nepodařilo uložit." />}
+      </section>
+
+      <section className="section">
+        <Link className="settings-link" href={paths.tags()}>
+          <span>Štítky</span>
+          <ChevronIcon />
+        </Link>
       </section>
 
       <section className="section" aria-labelledby="about-heading">

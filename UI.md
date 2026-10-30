@@ -85,7 +85,6 @@ Sluchátka                     ✓
 - Status chips are single-select; tag chips are multi-select; selected chips are visually distinct.
 - "Zrušit filtry" appears only when filters differ from the default (Aktivní, no tags).
 - Given gifts are hidden unless "Předáno" or "Vše" is selected.
-- Until the filters exist (phase 4), given gifts are revealed with a "Zobrazit předané (N)" toggle below the list.
 - Tapping a gift opens its edit form; "Přidat dárek" opens the full gift form with this person preselected.
 
 ## Reorder mode
@@ -94,6 +93,9 @@ Sluchátka                     ✓
 - Each row shows a drag handle ⋮⋮ on the right and "Posunout nahoru/dolů" buttons for accessibility.
 - Dragging works only by the handle (touch: press and move), so normal scrolling stays reliable.
 - A "Hotovo" button exits the mode.
+- In reorder mode a row shows only what identifies it (gift name; person avatar + name) so the controls fit at 320 px.
+- When only a filtered subset is reordered (filter "Aktivní"), hidden gifts keep their positions in the manual order.
+- Given gifts are always listed last and are not part of reorder mode; they keep their positions in the manual order.
 - Use `@dnd-kit` (free, open source) or an equally small solution.
 
 ## Person editing
@@ -141,7 +143,7 @@ Do not make the form feel administrative: optional fields are collapsed under "D
 
 ## Tags
 
-Compact readable chips. Tag management lives in Settings (create, rename, delete with confirmation).
+Compact readable chips. Tag management lives in Settings → Štítky: a "Nový štítek" field with "Přidat", and a list showing each tag with its gift count and icon buttons Přejmenovat (inline edit) / Smazat (confirmation says from how many gifts it will be removed; gifts stay). In the gift form, tags are a multi-select chip group between Priorita and Odkazy.
 
 ## Settings screen
 

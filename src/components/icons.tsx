@@ -129,6 +129,37 @@ export function ExternalIcon(props: IconProps) {
   );
 }
 
+export function PencilIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16z" />
+      <path d="M13.5 6.5l4 4" />
+    </Svg>
+  );
+}
+
+export function ChevronIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M9 5l7 7-7 7" />
+    </Svg>
+  );
+}
+
+/** Drag handle ⋮⋮ */
+export function GripIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      {[6, 12, 18].map((y) => (
+        <g key={y}>
+          <circle cx="9" cy={y} r="1.3" fill="currentColor" stroke="none" />
+          <circle cx="15" cy={y} r="1.3" fill="currentColor" stroke="none" />
+        </g>
+      ))}
+    </Svg>
+  );
+}
+
 export function CakeIcon(props: IconProps) {
   return (
     <Svg {...props}>

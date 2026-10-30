@@ -79,16 +79,16 @@ The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 - [x] Status; bought and given indicators
 - [x] Hide given gifts by default
 
-## Phase 4 — Tags, filters, sorting
+## Phase 4 — Tags, filters, sorting ✅
 
-- [ ] Tag management in Settings: create, rename, delete with confirmation
-- [ ] Assign multiple tags to a gift
-- [ ] Status filter Aktivní (default) / Koupeno / Předáno / Vše
-- [ ] Tag filter (all selected tags required), AND with status
-- [ ] "Zrušit filtry"; filters reset when leaving the person
-- [ ] Gift sort switch Podle priority / Vlastní pořadí (persisted)
-- [ ] Reorder mode with drag handle (`@dnd-kit`) + up/down buttons, for people and gifts
-- [ ] Empty states: no tags, no filter results
+- [x] Tag management in Settings: create, rename, delete with confirmation
+- [x] Assign multiple tags to a gift
+- [x] Status filter Aktivní (default) / Koupeno / Předáno / Vše
+- [x] Tag filter (all selected tags required), AND with status
+- [x] "Zrušit filtry"; filters reset when leaving the person
+- [x] Gift sort switch Podle priority / Vlastní pořadí (persisted)
+- [x] Reorder mode with drag handle (`@dnd-kit`) + up/down buttons, for people and gifts
+- [x] Empty states: no tags, no filter results
 
 ## Phase 5 — Quick add and UX polish
 

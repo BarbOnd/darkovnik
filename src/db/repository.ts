@@ -57,6 +57,8 @@ export type GiftLinkDraft = { id?: number; url: string; title?: string };
 export type CreateGiftsInput = Omit<CreateGiftInput, "personId"> & {
   personIds: number[];
   links: GiftLinkDraft[];
+  /** Tags assigned to every created gift; defaults to none. */
+  tagIds?: number[];
 };
 export type CreateTagInput = Pick<Tag, "name">;
 export type CreateGiftLinkInput = Pick<GiftLink, "giftId" | "url" | "title">;
@@ -96,8 +98,11 @@ export type GiftListRepository = {
   /** Creates one gift per recipient with its links, all in one transaction (nothing on failure). */
   createGiftsWithLinks(input: CreateGiftsInput): Promise<Gift[]>;
   updateGift(id: number, input: UpdateGiftInput): Promise<Gift>;
-  /** Updates the gift and makes its links exactly `links`, in one transaction. */
-  saveGiftWithLinks(id: number, input: UpdateGiftInput, links: GiftLinkDraft[]): Promise<Gift>;
+  /**
+   * Updates the gift and makes its links exactly `links` (and its tags exactly
+   * `tagIds` when given), in one transaction.
+   */
+  saveGiftWithLinks(id: number, input: UpdateGiftInput, links: GiftLinkDraft[], tagIds?: number[]): Promise<Gift>;
   /** `giftIds` must contain every gift of the recipient exactly once, in the new manual order. */
   reorderGifts(personId: number, giftIds: number[]): Promise<void>;
   deleteGift(id: number): Promise<void>;
@@ -117,6 +122,8 @@ export type GiftListRepository = {
   deleteGiftLink(id: number): Promise<void>;
 
   listGiftTagIds(giftId: number): Promise<number[]>;
+  /** Every gift–tag association (for filters and tag usage counts). */
+  listAllGiftTags(): Promise<GiftTag[]>;
   createGiftTag(association: GiftTag): Promise<GiftTag>;
   /** Replaces the gift's tag associations with exactly `tagIds`. */
   setGiftTags(giftId: number, tagIds: number[]): Promise<void>;
@@ -469,6 +476,27 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
     });
   }
 
+  async function assertTagsExist(transaction: IDBTransaction, tagIds: number[]): Promise<void> {
+    const tagsStore = transaction.objectStore(STORE_NAMES.tags);
+    for (const tagId of new Set(tagIds)) {
+      await entityMustExist<Tag>(tagsStore, tagId, "Štítek neexistuje.");
+    }
+  }
+
+  /** Makes the gift's tag associations exactly `tagIds` (tags must exist). */
+  async function replaceGiftTags(transaction: IDBTransaction, giftId: number, tagIds: number[]): Promise<void> {
+    const wanted = new Set(tagIds);
+    const giftTags = transaction.objectStore(STORE_NAMES.giftTags);
+    const current = await requestResult(giftTags.index("giftId").getAll(giftId) as IDBRequest<GiftTag[]>);
+    const currentTagIds = new Set(current.map((association) => association.tagId));
+    current
+      .filter((association) => !wanted.has(association.tagId))
+      .forEach((association) => giftTags.delete([association.giftId, association.tagId]));
+    wanted.forEach((tagId) => {
+      if (!currentTagIds.has(tagId)) giftTags.put({ giftId, tagId } satisfies GiftTag);
+    });
+  }
+
   async function deleteGiftDependencies(
     transaction: IDBTransaction,
     giftId: number,
@@ -492,7 +520,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
         (tag) => tag.id !== ownId && normalizeTagName(tag.name) === normalizeTagName(name),
       )
     ) {
-      throw new Error("Tag s tímto názvem už existuje.");
+      throw new Error("Štítek s tímto názvem už existuje.");
     }
   }
 
@@ -718,13 +746,14 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
     },
 
     async createGiftsWithLinks(input: CreateGiftsInput): Promise<Gift[]> {
-      const { personIds, links, ...fields } = input;
+      const { personIds, links, tagIds = [], ...fields } = input;
       if (personIds.length === 0) throw new Error("Vyberte alespoň jednoho příjemce.");
       if (new Set(personIds).size !== personIds.length) throw new Error("Příjemce je vybraný vícekrát.");
       personIds.forEach((personId) => assertGiftFields({ ...fields, personId }));
       assertLinkDrafts(links, false);
+      tagIds.forEach((tagId) => assertPositiveId(tagId, "ID štítku"));
       return inTransaction(
-        [STORE_NAMES.people, STORE_NAMES.gifts, STORE_NAMES.giftLinks, STORE_NAMES.metadata],
+        [STORE_NAMES.people, STORE_NAMES.gifts, STORE_NAMES.giftLinks, STORE_NAMES.tags, STORE_NAMES.giftTags, STORE_NAMES.metadata],
         async (transaction) => {
           // Check every reference before the first write.
           const people = transaction.objectStore(STORE_NAMES.people);
@@ -734,14 +763,16 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
           if (fields.buyerPersonId !== null) {
             await entityMustExist<Person>(people, fields.buyerPersonId, "Kupující dárku neexistuje.");
           }
+          await assertTagsExist(transaction, tagIds);
           const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
           const metadata = await getMetadataFromStore(metadataStore);
           const timestamp = now().toISOString();
           const created: Gift[] = [];
-          // Independent records: every recipient gets its own gift and own copies of the links.
+          // Independent records: every recipient gets its own gift, own link copies and own tags.
           for (const personId of personIds) {
             const gift = await insertGift(transaction, metadata, { ...fields, personId }, timestamp);
             await replaceLinks(transaction, metadata, gift.id, links);
+            await replaceGiftTags(transaction, gift.id, tagIds);
             created.push(gift);
           }
           metadataStore.put(metadata);
@@ -758,17 +789,25 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       );
     },
 
-    async saveGiftWithLinks(id: number, input: UpdateGiftInput, links: GiftLinkDraft[]): Promise<Gift> {
+    async saveGiftWithLinks(
+      id: number,
+      input: UpdateGiftInput,
+      links: GiftLinkDraft[],
+      tagIds?: number[],
+    ): Promise<Gift> {
       assertPositiveId(id, "ID dárku");
       assertGiftFields(input);
       assertLinkDrafts(links, true);
+      tagIds?.forEach((tagId) => assertPositiveId(tagId, "ID štítku"));
       return inTransaction(
-        [STORE_NAMES.people, STORE_NAMES.gifts, STORE_NAMES.giftLinks, STORE_NAMES.metadata],
+        [STORE_NAMES.people, STORE_NAMES.gifts, STORE_NAMES.giftLinks, STORE_NAMES.tags, STORE_NAMES.giftTags, STORE_NAMES.metadata],
         async (transaction) => {
+          if (tagIds !== undefined) await assertTagsExist(transaction, tagIds);
           const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
           const metadata = await getMetadataFromStore(metadataStore);
           const gift = await applyGiftUpdate(transaction, id, input);
           await replaceLinks(transaction, metadata, id, links);
+          if (tagIds !== undefined) await replaceGiftTags(transaction, id, tagIds);
           metadataStore.put(metadata);
           return gift;
         },
@@ -811,7 +850,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
     },
 
     async createTag(input: CreateTagInput): Promise<Tag> {
-      assertNonEmpty(input.name, "Název tagu");
+      assertNonEmpty(input.name, "Název štítku");
       const db = await connection();
       const transaction = db.transaction([STORE_NAMES.tags, STORE_NAMES.metadata], "readwrite");
       const done = transactionDone(transaction);
@@ -833,13 +872,13 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
     },
 
     async renameTag(id: number, name: string): Promise<Tag> {
-      assertPositiveId(id, "ID tagu");
-      assertNonEmpty(name, "Název tagu");
+      assertPositiveId(id, "ID štítku");
+      assertNonEmpty(name, "Název štítku");
       const db = await connection();
       const transaction = db.transaction(STORE_NAMES.tags, "readwrite");
       const done = transactionDone(transaction);
       const tagsStore = transaction.objectStore(STORE_NAMES.tags);
-      const tag = await entityMustExist<Tag>(tagsStore, id, "Tag neexistuje.");
+      const tag = await entityMustExist<Tag>(tagsStore, id, "Štítek neexistuje.");
       await assertUniqueTagName(tagsStore, name, id);
       const updated: Tag = { ...tag, name: name.trim(), updatedAt: now().toISOString() };
       tagsStore.put(updated);
@@ -848,12 +887,12 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
     },
 
     async deleteTag(id: number): Promise<void> {
-      assertPositiveId(id, "ID tagu");
+      assertPositiveId(id, "ID štítku");
       const db = await connection();
       const transaction = db.transaction([STORE_NAMES.tags, STORE_NAMES.giftTags], "readwrite");
       const done = transactionDone(transaction);
       const tags = transaction.objectStore(STORE_NAMES.tags);
-      await entityMustExist<Tag>(tags, id, "Tag neexistuje.");
+      await entityMustExist<Tag>(tags, id, "Štítek neexistuje.");
       const giftTags = transaction.objectStore(STORE_NAMES.giftTags);
       const associations = await requestResult(
         giftTags.index("tagId").getAll(id) as IDBRequest<GiftTag[]>,
@@ -959,19 +998,19 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
 
     async createGiftTag(association: GiftTag): Promise<GiftTag> {
       assertPositiveId(association.giftId, "ID dárku");
-      assertPositiveId(association.tagId, "ID tagu");
+      assertPositiveId(association.tagId, "ID štítku");
       const db = await connection();
       const transaction = db.transaction([STORE_NAMES.gifts, STORE_NAMES.tags, STORE_NAMES.giftTags], "readwrite");
       const done = transactionDone(transaction);
       await entityMustExist<Gift>(
         transaction.objectStore(STORE_NAMES.gifts),
         association.giftId,
-        "Dárek pro tag neexistuje.",
+        "Dárek pro štítek neexistuje.",
       );
       await entityMustExist<Tag>(
         transaction.objectStore(STORE_NAMES.tags),
         association.tagId,
-        "Tag neexistuje.",
+        "Štítek neexistuje.",
       );
       transaction.objectStore(STORE_NAMES.giftTags).put(association);
       await done;
@@ -980,32 +1019,20 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
 
     async setGiftTags(giftId: number, tagIds: number[]): Promise<void> {
       assertPositiveId(giftId, "ID dárku");
-      tagIds.forEach((tagId) => assertPositiveId(tagId, "ID tagu"));
-      const wanted = new Set(tagIds);
-      const db = await connection();
-      const transaction = db.transaction([STORE_NAMES.gifts, STORE_NAMES.tags, STORE_NAMES.giftTags], "readwrite");
-      const done = transactionDone(transaction);
-      await entityMustExist<Gift>(
-        transaction.objectStore(STORE_NAMES.gifts),
-        giftId,
-        "Dárek pro tag neexistuje.",
-      );
-      const tagsStore = transaction.objectStore(STORE_NAMES.tags);
-      for (const tagId of wanted) {
-        await entityMustExist<Tag>(tagsStore, tagId, "Tag neexistuje.");
-      }
-      const giftTags = transaction.objectStore(STORE_NAMES.giftTags);
-      const current = await requestResult(
-        giftTags.index("giftId").getAll(giftId) as IDBRequest<GiftTag[]>,
-      );
-      const currentTagIds = new Set(current.map((association) => association.tagId));
-      current
-        .filter((association) => !wanted.has(association.tagId))
-        .forEach((association) => giftTags.delete([association.giftId, association.tagId]));
-      wanted.forEach((tagId) => {
-        if (!currentTagIds.has(tagId)) giftTags.put({ giftId, tagId } satisfies GiftTag);
+      tagIds.forEach((tagId) => assertPositiveId(tagId, "ID štítku"));
+      await inTransaction([STORE_NAMES.gifts, STORE_NAMES.tags, STORE_NAMES.giftTags], async (transaction) => {
+        await entityMustExist<Gift>(
+          transaction.objectStore(STORE_NAMES.gifts),
+          giftId,
+          "Dárek pro štítek neexistuje.",
+        );
+        await assertTagsExist(transaction, tagIds);
+        await replaceGiftTags(transaction, giftId, tagIds);
       });
-      await done;
+    },
+
+    listAllGiftTags(): Promise<GiftTag[]> {
+      return readAll<GiftTag>(STORE_NAMES.giftTags);
     },
   };
 

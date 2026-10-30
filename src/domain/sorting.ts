@@ -6,6 +6,9 @@ export function comparePeopleByName(a: Pick<Person, "id" | "name">, b: Pick<Pers
   return a.name.localeCompare(b.name, "cs-CZ") || a.id - b.id;
 }
 
+/** Tags are listed by name the same way as people (cs-CZ, ties by id). */
+export const compareTagsByName = comparePeopleByName;
+
 /** HIGH → MEDIUM → LOW, then newest first, ties by id. */
 export function compareGiftsByPriority(
   a: Pick<Gift, "id" | "priority" | "createdAt">,
@@ -22,6 +25,22 @@ export function compareBySortOrder(
   b: { id: number; sortOrder: number },
 ): number {
   return a.sortOrder - b.sortOrder || a.id - b.id;
+}
+
+/** Moves given gifts to the end of the list, keeping the order within both groups. */
+export function givenLast<T extends Pick<Gift, "status">>(gifts: readonly T[]): T[] {
+  return [...gifts.filter((gift) => gift.status !== "GIVEN"), ...gifts.filter((gift) => gift.status === "GIVEN")];
+}
+
+/**
+ * New full manual order after the user reordered only the visible subset:
+ * visible items take the slots visible items had, hidden items keep theirs.
+ * Example: full [a, H, b, c], visible reordered to [c, a, b] → [c, H, a, b].
+ */
+export function reorderSubset(fullOrder: readonly number[], visibleInNewOrder: readonly number[]): number[] {
+  const visible = new Set(visibleInNewOrder);
+  let next = 0;
+  return fullOrder.map((id) => (visible.has(id) ? visibleInNewOrder[next++] : id));
 }
 
 export function sortPeople<T extends Person>(people: readonly T[], mode: PeopleSortMode): T[] {

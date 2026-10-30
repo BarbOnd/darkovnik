@@ -13,6 +13,7 @@ import { PeopleScreen } from "../features/people/PeopleScreen";
 import { PersonDetailScreen } from "../features/people/PersonDetailScreen";
 import { EditPersonScreen, NewPersonScreen } from "../features/people/PersonFormScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
+import { TagsScreen } from "../features/tags/TagsScreen";
 import { AppContext, type AppContextValue } from "./AppContext";
 import { paths, useRoute, type Route } from "./routes";
 import { applyTheme } from "./theme";
@@ -25,6 +26,8 @@ function Screen({ route }: { route: Route }) {
       return <PeopleScreen />;
     case "settings":
       return <SettingsScreen />;
+    case "tags":
+      return <TagsScreen />;
     case "personNew":
       return <NewPersonScreen />;
     case "person":
@@ -48,7 +51,7 @@ function Screen({ route }: { route: Route }) {
 }
 
 function BottomNav({ route }: { route: Route }) {
-  const settingsActive = route.name === "settings";
+  const settingsActive = route.name === "settings" || route.name === "tags";
   return (
     <nav className="bottom-nav" aria-label="Hlavní navigace">
       <Link

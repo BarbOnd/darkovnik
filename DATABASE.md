@@ -180,6 +180,8 @@ NotificationLog is device-local and is **not** exported. Entries older than one 
 - `PRIORITY`: HIGH → MEDIUM → LOW, then `createdAt` descending (newest first), ties by `id`.
 - `MANUAL`: by `sortOrder` ascending.
 
+In the displayed list, GIVEN gifts always come last (after NEW and BOUGHT); the sort mode applies within each group. The stored `sortOrder` is not changed by this.
+
 `sortOrder` is maintained in both modes so switching to MANUAL never loses an order. New records get a `sortOrder` that places them **at the top** of the manual order. After reordering or deleting, sortOrders may be normalized to `0..n-1`; gaps are allowed in between.
 
 ## ID scope and import
