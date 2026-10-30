@@ -3,6 +3,7 @@ import { useApp } from "../../app/AppContext";
 import { paths } from "../../app/routes";
 import { Link } from "../../components/Link";
 import { PersonAvatar } from "../../components/PersonAvatar";
+import { QuickAddButton } from "../../components/QuickAddButton";
 import { ReorderList } from "../../components/ReorderList";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
@@ -135,6 +136,7 @@ export function PeopleScreen() {
           </>
         )}
       </section>
+      {!reordering && <QuickAddButton />}
     </>
   );
 }

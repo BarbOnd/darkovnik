@@ -85,7 +85,7 @@ Sluchátka                     ✓
 - Status chips are single-select; tag chips are multi-select; selected chips are visually distinct.
 - "Zrušit filtry" appears only when filters differ from the default (Aktivní, no tags).
 - Given gifts are hidden unless "Předáno" or "Vše" is selected.
-- Tapping a gift opens its edit form; "Přidat dárek" opens the full gift form with this person preselected.
+- Tapping a gift opens its edit form. New gifts are added only through quick add: the floating "+" (and "Přidat dárek" in the empty state) opens it with this person preselected.
 
 ## Reorder mode
 
@@ -114,7 +114,7 @@ Picking a file, or "Změnit fotku" on an existing photo (opens with the saved cr
 ## Gift form
 
 Order:
-1. Příjemce (in edit mode: single select, can be changed; in add mode: multi-select);
+1. Příjemce (single select, can be changed; the gift form is used for editing — new gifts come from quick add);
 2. Název dárku.
 
 Then: Kdo koupí, Priorita, Štítky, Odkazy, Poznámka, Stav.
@@ -127,13 +127,14 @@ Do not make the form feel administrative: optional fields are collapsed under "D
 +
 → příjemce (chips, multi-select, "+ Nová osoba")
 → název dárku
+→ (Další podrobnosti — collapsed, optional)
 → [Uložit]  [Uložit a přidat další]
 ```
 
 - "+ Nová osoba" shows an inline name field; confirming creates and selects the person.
 - With no people yet, the inline name field is shown immediately.
-- After "Uložit", close the flow and show a short confirmation (e.g. toast "Uloženo").
-- After "Uložit a přidat další", clear the name, keep recipients, focus the name field.
+- After "Uložit", close the flow and show a short toast "Uloženo" ("Uloženo – N dárky" for several recipients) above the bottom navigation.
+- After "Uložit a přidat další", clear the name and reset the details to defaults, keep recipients, focus the name field.
 
 ## Status indicators
 

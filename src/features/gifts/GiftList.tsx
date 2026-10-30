@@ -57,7 +57,7 @@ function GiftsHeading({ inRow = false }: { inRow?: boolean }) {
 
 function AddGiftButton({ personId }: { personId: number }) {
   return (
-    <Link className="button button--primary" href={paths.giftNew(personId)}>
+    <Link className="button button--primary" href={paths.quickAdd(personId)}>
       <PlusIcon />
       Přidat dárek
     </Link>
@@ -262,14 +262,13 @@ function GiftRows({ personId, data, onReordered }: { personId: number; data: Gif
         </ul>
       )}
 
-      <div className="list-actions">
-        <AddGiftButton personId={personId} />
-        {manual && reorderAllowed && reorderable.length > 1 && (
+      {manual && reorderAllowed && reorderable.length > 1 && (
+        <div className="list-actions">
           <button type="button" className="button button--ghost" onClick={startReordering}>
             Upravit pořadí
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {manual && !reorderAllowed && (
         <p className="field__hint">Pořadí můžete upravit s filtrem Vše, nebo Aktivní bez štítků.</p>
       )}

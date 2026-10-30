@@ -90,16 +90,16 @@ The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 - [x] Reorder mode with drag handle (`@dnd-kit`) + up/down buttons, for people and gifts
 - [x] Empty states: no tags, no filter results
 
-## Phase 5 — Quick add and UX polish
+## Phase 5 — Quick add and UX polish ✅
 
-- [ ] Prominent `+` on People and person detail
-- [ ] Quick add: recipients → name → Uložit
-- [ ] "+ Nová osoba" inline; direct inline field when no people exist
-- [ ] Uložit a přidat další (keep recipients, focus name)
-- [ ] Preselect the person when opened from person detail
-- [ ] Touch-friendly controls, accessible labels, focus states
-- [ ] Loading / error / empty states
-- [ ] Check 320 px layout in both themes
+- [x] Prominent `+` on People and person detail
+- [x] Quick add: recipients → name → Uložit; optional collapsed "Další podrobnosti" (same fields as editing)
+- [x] "+ Nová osoba" inline; direct inline field when no people exist
+- [x] Uložit a přidat další (keep recipients, focus name)
+- [x] Preselect the person when opened from person detail
+- [x] Touch-friendly controls, accessible labels, focus states
+- [x] Loading / error / empty states
+- [x] Check 320 px layout in both themes
 
 ## Phase 6 — Birthdays and reminders
 

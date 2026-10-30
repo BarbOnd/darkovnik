@@ -11,7 +11,10 @@ describe("routes", () => {
     ["#/osoby/12", { name: "person", personId: 12 }],
     ["#/osoby/12/", { name: "person", personId: 12 }],
     ["#/osoby/12/upravit", { name: "personEdit", personId: 12 }],
-    ["#/osoby/12/novy-darek", { name: "giftNew", personId: 12 }],
+    ["#/pridat", { name: "quickAdd", personId: null }],
+    ["#/pridat/12", { name: "quickAdd", personId: 12 }],
+    ["#/pridat/0", { name: "notFound" }],
+    ["#/osoby/12/novy-darek", { name: "notFound" }],
     ["#/darky/7", { name: "giftEdit", giftId: 7 }],
     ["#/darky/0", { name: "notFound" }],
     ["#/darky/7/x", { name: "notFound" }],
@@ -26,7 +29,8 @@ describe("routes", () => {
     expect(parseRoute(paths.person(3))).toEqual({ name: "person", personId: 3 });
     expect(parseRoute(paths.personEdit(3))).toEqual({ name: "personEdit", personId: 3 });
     expect(parseRoute(paths.settings())).toEqual({ name: "settings" });
-    expect(parseRoute(paths.giftNew(3))).toEqual({ name: "giftNew", personId: 3 });
+    expect(parseRoute(paths.quickAdd())).toEqual({ name: "quickAdd", personId: null });
+    expect(parseRoute(paths.quickAdd(3))).toEqual({ name: "quickAdd", personId: 3 });
     expect(parseRoute(paths.giftEdit(9))).toEqual({ name: "giftEdit", giftId: 9 });
   });
 });

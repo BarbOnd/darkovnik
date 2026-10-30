@@ -178,7 +178,7 @@ Avatar, name, and the number of **active** gifts (NEW + BOUGHT) with correct Cze
 
 - At least one recipient and a non-empty name are required.
 - New gifts get priority MEDIUM and status NEW.
-- **New person inline:** the recipient picker contains "+ Nová osoba". It asks only for a name (birthday can be added later), creates the person, and preselects them.
+- **New person inline:** the recipient picker contains "+ Nová osoba". It asks only for a name (birthday can be added later), creates the person, and preselects them. A typed but not yet confirmed name is created automatically on save.
 - If no person exists yet, the flow opens directly with the "Nová osoba" field.
 - Opening `+` from a person detail preselects that person.
 
@@ -186,7 +186,7 @@ Buttons:
 - **Uložit** — creates one Gift per selected recipient and closes the flow.
 - **Uložit a přidat další** — creates the records, opens a fresh form with the same recipient(s) preselected and focus in the name field.
 
-Other metadata is added later through gift editing.
+Below the name, a collapsed **"Další podrobnosti"** section offers the same optional fields as gift editing (buyer, priority, tags, links, note, status), so details can be set before saving. Left closed, the gift is saved with the defaults above. Everything is saved in one transaction.
 
 ## 12. Birthday reminders
 

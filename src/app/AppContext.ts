@@ -5,6 +5,8 @@ export type AppContextValue = {
   repository: GiftListRepository;
   metadata: AppMetadata;
   updatePreferences(input: UpdatePreferencesInput): Promise<void>;
+  /** Short non-blocking confirmation, e.g. "Uloženo"; survives navigation. */
+  showToast(message: string): void;
 };
 
 export const AppContext = createContext<AppContextValue | null>(null);

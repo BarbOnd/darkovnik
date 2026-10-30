@@ -8,7 +8,8 @@ import {
   type AppMetadata,
   type UpdatePreferencesInput,
 } from "../db/repository";
-import { EditGiftScreen, NewGiftScreen } from "../features/gifts/GiftFormScreen";
+import { EditGiftScreen } from "../features/gifts/GiftFormScreen";
+import { QuickAddScreen } from "../features/gifts/QuickAddScreen";
 import { PeopleScreen } from "../features/people/PeopleScreen";
 import { PersonDetailScreen } from "../features/people/PersonDetailScreen";
 import { EditPersonScreen, NewPersonScreen } from "../features/people/PersonFormScreen";
@@ -18,7 +19,9 @@ import { AppContext, type AppContextValue } from "./AppContext";
 import { paths, useRoute, type Route } from "./routes";
 import { applyTheme } from "./theme";
 
-type StartState = { status: "loading" } | { status: "ready"; metadata: AppMetadata } | { status: "error" };
+const TOAST_DURATION_MS = 2500;
+
+type StartState ={ status: "loading" } | { status: "ready"; metadata: AppMetadata } | { status: "error" };
 
 function Screen({ route }: { route: Route }) {
   switch (route.name) {
@@ -34,8 +37,8 @@ function Screen({ route }: { route: Route }) {
       return <PersonDetailScreen key={route.personId} personId={route.personId} />;
     case "personEdit":
       return <EditPersonScreen key={route.personId} personId={route.personId} />;
-    case "giftNew":
-      return <NewGiftScreen key={route.personId} personId={route.personId} />;
+    case "quickAdd":
+      return <QuickAddScreen key={route.personId ?? "none"} personId={route.personId} />;
     case "giftEdit":
       return <EditGiftScreen key={route.giftId} giftId={route.giftId} />;
     case "notFound":
@@ -104,10 +107,23 @@ export function App() {
     [repository],
   );
 
+  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
+  const showToast = useCallback((message: string) => {
+    // A new id restarts the timer even when the same message repeats.
+    setToast((current) => ({ id: (current?.id ?? 0) + 1, message }));
+  }, []);
+  useEffect(() => {
+    if (toast === null) return;
+    const timer = window.setTimeout(() => setToast(null), TOAST_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   const context = useMemo<AppContextValue | null>(
     () =>
-      start.status === "ready" ? { repository, metadata: start.metadata, updatePreferences } : null,
-    [repository, start, updatePreferences],
+      start.status === "ready"
+        ? { repository, metadata: start.metadata, updatePreferences, showToast }
+        : null,
+    [repository, start, updatePreferences, showToast],
   );
 
   return (
@@ -126,6 +142,13 @@ export function App() {
           </AppContext.Provider>
         )}
       </main>
+      <div className="toast-region" role="status" aria-live="polite">
+        {toast !== null && (
+          <p key={toast.id} className="toast">
+            {toast.message}
+          </p>
+        )}
+      </div>
       <BottomNav route={route} />
     </div>
   );

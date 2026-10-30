@@ -8,8 +8,9 @@ export type Route =
   | { name: "personNew" }
   | { name: "person"; personId: number }
   | { name: "personEdit"; personId: number }
-  | { name: "giftNew"; personId: number }
   | { name: "giftEdit"; giftId: number }
+  /** Quick add; `personId` is preselected as recipient when opened from a person. */
+  | { name: "quickAdd"; personId: number | null }
   | { name: "notFound" };
 
 export const paths = {
@@ -19,9 +20,8 @@ export const paths = {
   personNew: () => "#/osoby/nova",
   person: (personId: number) => `#/osoby/${personId}`,
   personEdit: (personId: number) => `#/osoby/${personId}/upravit`,
-  /** New gift with this person preselected as recipient. */
-  giftNew: (personId: number) => `#/osoby/${personId}/novy-darek`,
   giftEdit: (giftId: number) => `#/darky/${giftId}`,
+  quickAdd: (personId?: number) => (personId === undefined ? "#/pridat" : `#/pridat/${personId}`),
 };
 
 function parseId(value: string): number | null {
@@ -35,12 +35,17 @@ export function parseRoute(hash: string): Route {
   if (path === "/nastaveni") return { name: "settings" };
   if (path === "/nastaveni/stitky") return { name: "tags" };
   if (path === "/osoby/nova") return { name: "personNew" };
-  const personMatch = /^\/osoby\/([1-9]\d*)(?:\/(upravit|novy-darek))?$/.exec(path);
+  if (path === "/pridat") return { name: "quickAdd", personId: null };
+  const quickAddMatch = /^\/pridat\/([1-9]\d*)$/.exec(path);
+  if (quickAddMatch !== null) {
+    const personId = parseId(quickAddMatch[1]);
+    return personId === null ? { name: "notFound" } : { name: "quickAdd", personId };
+  }
+  const personMatch = /^\/osoby\/([1-9]\d*)(?:\/(upravit))?$/.exec(path);
   if (personMatch !== null) {
     const personId = parseId(personMatch[1]);
     if (personId === null) return { name: "notFound" };
     if (personMatch[2] === "upravit") return { name: "personEdit", personId };
-    if (personMatch[2] === "novy-darek") return { name: "giftNew", personId };
     return { name: "person", personId };
   }
   const giftMatch = /^\/darky\/([1-9]\d*)$/.exec(path);

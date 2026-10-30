@@ -3,6 +3,7 @@ import { useApp } from "../../app/AppContext";
 import { goBack, navigate, paths } from "../../app/routes";
 import { Dialog } from "../../components/Dialog";
 import { PersonAvatar } from "../../components/PersonAvatar";
+import { QuickAddButton } from "../../components/QuickAddButton";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import { CakeIcon, MoreIcon } from "../../components/icons";
@@ -163,6 +164,7 @@ export function PersonDetailScreen({ personId }: { personId: number }) {
         </section>
       )}
       {person !== undefined && <GiftList person={person} />}
+      {person !== undefined && <QuickAddButton personId={person.id} />}
 
       {person !== undefined && deletion !== null && (
         <DeletePersonDialog person={person} impact={deletion} onClose={() => setDeletion(null)} />
