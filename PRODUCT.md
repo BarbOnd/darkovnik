@@ -243,7 +243,7 @@ Friendly empty states with a next action for: no people, person with no gifts, n
 - The whole file and the merged result are validated before any write; on error nothing changes and a Czech message explains the problem.
 - **Fresh installation** (no people and no gifts): import directly; existing tags are replaced by the imported ones.
 - **Installation with data:** show a confirmation first:
-  "Import sloučí data se stávajícími. Přepíše se X osob, Y dárků a Z tagů se stejným ID. Nic se nesmaže. Pokračovat?"
+  "Importovat zálohu? Import sloučí data se stávajícími. Nic se nesmaže. Přepíšou se stávající záznamy se stejným ID: X osob, Y dárků, Z štítků." (counts with Czech plurals; "Žádný stávající záznam se nepřepíše." when there are none)
   plus a hint to export the current data first.
 - After success, show a summary (added / updated counts).
 

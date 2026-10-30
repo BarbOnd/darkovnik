@@ -9,6 +9,7 @@ import type { Person } from "../../domain/entities";
 import { createAvatarSeed } from "../../lib/avatar";
 import { INITIAL_CROP_VIEW, photoOfPerson, toPhotoFields, type PersonPhoto } from "../../domain/photo";
 import { decodePhoto, loadPhotoSource, PhotoError } from "../../lib/photo";
+import { requestPersistentStorage } from "../../lib/storage";
 import { useLoad } from "../../lib/useLoad";
 import { AvatarPicker } from "./AvatarPicker";
 import { BirthdayInput } from "./BirthdayInput";
@@ -248,6 +249,8 @@ export function NewPersonScreen() {
         cancelFallback={paths.people()}
         onSubmit={async (values) => {
           const person = await repository.createPerson({ ...values, ...toPhotoFields(values.photo) });
+          // Saving a person is a good moment to ask for persistent storage (PRODUCT.md §14).
+          void requestPersistentStorage();
           replaceRoute(paths.person(person.id));
         }}
       />

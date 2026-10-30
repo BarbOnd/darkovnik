@@ -8,6 +8,7 @@ import { ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import type { Theme } from "../../domain/entities";
 import { BirthdayNotificationsSetting } from "../notifications/BirthdayNotificationsSetting";
+import { DataSection } from "./DataSection";
 
 const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: "SYSTEM", label: "Podle systému" },
@@ -55,6 +56,8 @@ export function SettingsScreen() {
           <ChevronIcon />
         </Link>
       </section>
+
+      <DataSection />
 
       <section className="section" aria-labelledby="about-heading">
         <h2 id="about-heading" className="section__title">

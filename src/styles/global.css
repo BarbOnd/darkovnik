@@ -986,6 +986,12 @@ textarea {
   }
 }
 
+.data-actions {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .form__danger {
   padding-top: var(--space);
   border-top: 1px solid var(--color-border);

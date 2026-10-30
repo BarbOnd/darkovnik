@@ -14,6 +14,15 @@ import {
   type Person,
   type Tag,
 } from "../domain/entities";
+import {
+  createBackupDocument,
+  datasetError,
+  planImport,
+  type BackupDocument,
+  type Dataset,
+  type ImportPlan,
+  type Result,
+} from "../domain/backup";
 import { photoFieldsError, type PersonPhotoFields } from "../domain/photo";
 import { compareBySortOrder } from "../domain/sorting";
 import {
@@ -70,6 +79,18 @@ export type UpdateGiftLinkInput = Partial<Pick<GiftLink, "url" | "title">>;
 export type UpdatePreferencesInput = Partial<AppPreferences>;
 
 export type ReminderClaim = Omit<NotificationLogEntry, "shownAt">;
+
+/** An import was refused because the merged data would be invalid; the message is Czech. */
+export class ImportError extends Error {}
+
+const BACKUP_STORES: StoreName[] = [
+  STORE_NAMES.people,
+  STORE_NAMES.gifts,
+  STORE_NAMES.giftLinks,
+  STORE_NAMES.tags,
+  STORE_NAMES.giftTags,
+  STORE_NAMES.metadata,
+];
 
 export type PersonDeletionImpact = {
   /** Gifts for this person; they are deleted with the person. */
@@ -138,6 +159,16 @@ export type GiftListRepository = {
    * people are skipped; entries older than one year are removed.
    */
   claimReminders(entries: ReminderClaim[]): Promise<string[]>;
+
+  /** All exportable data, read in one transaction (DATABASE.md → Backup schema). */
+  exportBackup(): Promise<BackupDocument>;
+  /** What an import would do, without writing; an invalid merged result is reported as an error. */
+  previewImport(document: BackupDocument): Promise<Result<ImportPlan>>;
+  /**
+   * Merges the backup by stable ID in one transaction. Validation of the merged
+   * result happens inside it; on any error nothing is written (ImportError).
+   */
+  importBackup(document: BackupDocument): Promise<ImportPlan>;
   createGiftTag(association: GiftTag): Promise<GiftTag>;
   /** Replaces the gift's tag associations with exactly `tagIds`. */
   setGiftTags(giftId: number, tagIds: number[]): Promise<void>;
@@ -488,6 +519,33 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
         }),
       );
     });
+  }
+
+  async function readDataset(transaction: IDBTransaction): Promise<Dataset> {
+    const getAll = <T,>(storeName: StoreName) =>
+      requestResult(transaction.objectStore(storeName).getAll() as IDBRequest<T[]>);
+    const [people, gifts, giftLinks, tags, giftTags] = await Promise.all([
+      getAll<Person>(STORE_NAMES.people),
+      getAll<Gift>(STORE_NAMES.gifts),
+      getAll<GiftLink>(STORE_NAMES.giftLinks),
+      getAll<Tag>(STORE_NAMES.tags),
+      getAll<GiftTag>(STORE_NAMES.giftTags),
+    ]);
+    const metadata = await getMetadataFromStore(transaction.objectStore(STORE_NAMES.metadata));
+    return {
+      people,
+      gifts,
+      giftLinks,
+      tags,
+      giftTags,
+      counters: {
+        highestPersonId: metadata.highestPersonId,
+        highestGiftId: metadata.highestGiftId,
+        highestTagId: metadata.highestTagId,
+        highestGiftLinkId: metadata.highestGiftLinkId,
+      },
+      birthdayNotificationsEnabled: metadata.birthdayNotificationsEnabled,
+    };
   }
 
   async function assertTagsExist(transaction: IDBTransaction, tagIds: number[]): Promise<void> {
@@ -1047,6 +1105,66 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
 
     listAllGiftTags(): Promise<GiftTag[]> {
       return readAll<GiftTag>(STORE_NAMES.giftTags);
+    },
+
+    async exportBackup(): Promise<BackupDocument> {
+      const db = await connection();
+      const transaction = db.transaction(BACKUP_STORES, "readonly");
+      const done = transactionDone(transaction);
+      const dataset = await readDataset(transaction);
+      await done;
+      return createBackupDocument(dataset, now());
+    },
+
+    async previewImport(document: BackupDocument): Promise<Result<ImportPlan>> {
+      const db = await connection();
+      const transaction = db.transaction(BACKUP_STORES, "readonly");
+      const done = transactionDone(transaction);
+      const local = await readDataset(transaction);
+      await done;
+      const plan = planImport(local, document);
+      const error = datasetError(plan.merged);
+      return error === null ? { ok: true, value: plan } : { ok: false, error };
+    },
+
+    importBackup(document: BackupDocument): Promise<ImportPlan> {
+      return inTransaction(BACKUP_STORES, async (transaction) => {
+        // Re-plan inside the write transaction so it works on the current data.
+        const plan = planImport(await readDataset(transaction), document);
+        const error = datasetError(plan.merged);
+        if (error !== null) throw new ImportError(error);
+
+        const tagsStore = transaction.objectStore(STORE_NAMES.tags);
+        const giftTagsStore = transaction.objectStore(STORE_NAMES.giftTags);
+        for (const tagId of plan.removedTagIds) {
+          const associations = await requestResult(
+            giftTagsStore.index("tagId").getAll(tagId) as IDBRequest<GiftTag[]>,
+          );
+          associations.forEach((association) => giftTagsStore.delete([association.giftId, association.tagId]));
+          tagsStore.delete(tagId);
+        }
+
+        const peopleStore = transaction.objectStore(STORE_NAMES.people);
+        const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
+        const giftLinksStore = transaction.objectStore(STORE_NAMES.giftLinks);
+        document.people.forEach((person) => peopleStore.put(person));
+        document.gifts.forEach((gift) => giftsStore.put(gift));
+        document.tags.forEach((tag) => tagsStore.put(tag));
+        const relinked = new Set(plan.relinkedGiftIds);
+        plan.merged.giftLinks
+          .filter((link) => relinked.has(link.giftId))
+          .forEach((link) => giftLinksStore.put(link));
+        document.giftTags.forEach((association) => giftTagsStore.put(association));
+
+        const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+        const metadata = await getMetadataFromStore(metadataStore);
+        metadataStore.put({
+          ...metadata,
+          ...plan.merged.counters,
+          birthdayNotificationsEnabled: plan.merged.birthdayNotificationsEnabled,
+        });
+        return plan;
+      });
     },
 
     async listNotificationLogKeys(): Promise<string[]> {

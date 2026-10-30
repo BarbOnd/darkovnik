@@ -7,6 +7,8 @@ export type AppContextValue = {
   repository: GiftListRepository;
   metadata: AppMetadata;
   updatePreferences(input: UpdatePreferencesInput): Promise<void>;
+  /** Re-reads metadata after changes made outside updatePreferences (e.g. an import). */
+  reloadMetadata(): Promise<void>;
   /** Short non-blocking confirmation, e.g. "Uloženo"; survives navigation. */
   showToast(message: string): void;
   /** Reminders found in this session, for the "Zmeškané připomínky" card. */

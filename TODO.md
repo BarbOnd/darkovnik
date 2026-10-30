@@ -114,19 +114,19 @@ The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 - [ ] Verify behavior on Android (needs a device; after phase 8 for system notifications) — limitations documented in PRODUCT.md §12
 - [x] No remote notification service
 
-## Phase 7 — Backup
+## Phase 7 — Backup ✅
 
-- [ ] Export JSON download `giftlist-zaloha-YYYY-MM-DD.json`, store `lastExportAt`
-- [ ] "Poslední záloha" info and gentle reminder after 30 days
-- [ ] Import from file picker
-- [ ] Validate document and merged result before writes; unsupported schema version
-- [ ] Merge by stable ID; no deletion; counters advanced
-- [ ] Fresh installation: replace tags with imported tags
-- [ ] Non-fresh installation: overwrite-count confirmation
-- [ ] Link order normalization after merge
-- [ ] Result summary (added / updated)
-- [ ] `navigator.storage.persist()` and its status in Settings
-- [ ] Test the complete phone-migration flow into an empty app
+- [x] Export JSON download `giftlist-zaloha-YYYY-MM-DD.json`, store `lastExportAt`
+- [x] "Poslední záloha" info and gentle reminder after 30 days
+- [x] Import from file picker
+- [x] Validate document and merged result before writes; unsupported schema version
+- [x] Merge by stable ID; no deletion; counters advanced
+- [x] Fresh installation: replace tags with imported tags
+- [x] Non-fresh installation: overwrite-count confirmation
+- [x] Link order normalization after merge
+- [x] Result summary (added / updated)
+- [x] `navigator.storage.persist()` and its status in Settings
+- [x] Test the complete phone-migration flow into an empty app (automated test src/db/backup.test.ts + manual import check in Firefox; a real second phone after phase 9)
 
 ## Phase 8 — PWA and offline
 

@@ -9,6 +9,7 @@ import type { Person, Tag } from "../../domain/entities";
 import { comparePeopleByName, compareTagsByName } from "../../domain/sorting";
 import { createAvatarSeed } from "../../lib/avatar";
 import { formatCount, GIFT_FORMS } from "../../lib/plural";
+import { requestPersistentStorage } from "../../lib/storage";
 import { useLoad } from "../../lib/useLoad";
 import { GiftDetailsFields } from "./GiftDetailsFields";
 import { DEFAULT_GIFT_DETAILS, prepareGiftDetails, type GiftDetails } from "./giftDetails";
@@ -63,6 +64,7 @@ function QuickAddForm({ initialPeople, tags, preselectedId, closeTo }: {
       return null;
     }
     const person = await repository.createPerson({ name: personName, birthday: null, avatarSeed: createAvatarSeed() });
+    void requestPersistentStorage();
     setPeople((current) => [...current, person].sort(comparePeopleByName));
     setRecipientIds((current) => [...current, person.id]);
     setNewPersonName("");

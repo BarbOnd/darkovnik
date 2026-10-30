@@ -10,6 +10,9 @@ export type PluralForms = {
 export const GIFT_FORMS: PluralForms = { one: "dárek", few: "dárky", other: "dárků" };
 /** After "u" / "z" etc.: "u 1 dárku", "u 3 dárků" */
 export const GIFT_GENITIVE_FORMS: PluralForms = { one: "dárku", few: "dárků", other: "dárků" };
+export const PERSON_FORMS: PluralForms = { one: "osoba", few: "osoby", other: "osob" };
+export const TAG_FORMS: PluralForms = { one: "štítek", few: "štítky", other: "štítků" };
+export const LINK_FORMS: PluralForms = { one: "odkaz", few: "odkazy", other: "odkazů" };
 export const DAY_FORMS: PluralForms = { one: "den", few: "dny", other: "dní" };
 export const YEAR_FORMS: PluralForms = { one: "rok", few: "roky", other: "let" };
 

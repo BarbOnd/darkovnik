@@ -16,6 +16,7 @@ import { EditPersonScreen, NewPersonScreen } from "../features/people/PersonForm
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { TagsScreen } from "../features/tags/TagsScreen";
 import { useReminders } from "../features/notifications/useReminders";
+import { requestPersistentStorage } from "../lib/storage";
 import { AppContext, type AppContextValue } from "./AppContext";
 import { paths, useRoute, type Route } from "./routes";
 import { applyTheme } from "./theme";
@@ -108,6 +109,16 @@ export function App() {
     [repository],
   );
 
+  const reloadMetadata = useCallback(async () => {
+    setStart({ status: "ready", metadata: await repository.getMetadata() });
+  }, [repository]);
+
+  // Ask the browser to keep the data even under storage pressure (PRODUCT.md §14).
+  const ready = start.status === "ready";
+  useEffect(() => {
+    if (ready) void requestPersistentStorage();
+  }, [ready]);
+
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const showToast = useCallback((message: string) => {
     // A new id restarts the timer even when the same message repeats.
@@ -129,12 +140,13 @@ export function App() {
             repository,
             metadata: start.metadata,
             updatePreferences,
+            reloadMetadata,
             showToast,
             missedReminders: reminders.missed,
             dismissMissedReminders: reminders.dismiss,
           }
         : null,
-    [repository, start, updatePreferences, showToast, reminders.missed, reminders.dismiss],
+    [repository, start, updatePreferences, reloadMetadata, showToast, reminders.missed, reminders.dismiss],
   );
 
   return (

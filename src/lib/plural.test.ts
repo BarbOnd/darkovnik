@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { DAY_FORMS, formatCount, GIFT_FORMS, GIFT_GENITIVE_FORMS, YEAR_FORMS } from "./plural";
+import {
+  DAY_FORMS,
+  formatCount,
+  GIFT_FORMS,
+  GIFT_GENITIVE_FORMS,
+  LINK_FORMS,
+  PERSON_FORMS,
+  TAG_FORMS,
+  YEAR_FORMS,
+} from "./plural";
 
 describe("Czech plurals", () => {
   it.each([
@@ -21,6 +30,15 @@ describe("Czech plurals", () => {
   ])("gifts genitive: %i → %s", (count, text) =>
     expect(formatCount(count, GIFT_GENITIVE_FORMS)).toBe(text),
   );
+
+  it.each([
+    [1, PERSON_FORMS, "1 osoba"],
+    [3, PERSON_FORMS, "3 osoby"],
+    [5, PERSON_FORMS, "5 osob"],
+    [1, TAG_FORMS, "1 štítek"],
+    [4, TAG_FORMS, "4 štítky"],
+    [0, LINK_FORMS, "0 odkazů"],
+  ])("%i with forms → %s", (count, forms, text) => expect(formatCount(count, forms)).toBe(text));
 
   it.each([
     [1, "1 den"],
