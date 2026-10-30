@@ -102,7 +102,7 @@ Requires confirmation that warns when the person is a buyer on other people's gi
 
 DiceBear 10.x, style `initial-face`, generated locally via `@dicebear/core` + `@dicebear/styles`. Never call the DiceBear HTTP API.
 
-Each person has an opaque random `avatarSeed` created on person creation. Never derive it from name, birthday, or other personal data. Changing name or birthday does not change the seed. "Změnit avatara" picks another seed and saves it.
+Each person has an opaque random `avatarSeed` created on person creation. Never derive it from name, birthday, or other personal data. Changing name or birthday does not change the seed. "Změnit avatara" picks another seed and saves it. The letter in the avatar is the initial of the current name, injected at render time (never stored, never part of the seed) — see PRODUCT.md §16.
 
 ## Birthday reminders
 

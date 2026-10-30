@@ -296,6 +296,44 @@ describe("people", () => {
     expect(manualOrder(await repository.listPeople())).toEqual([a.id, c.id, b.id]);
   });
 
+  it("reports the deletion impact: own gifts and other people's gifts as buyer", async () => {
+    const repository = createRepository();
+    await repository.initialize();
+    const jana = await createPerson(repository, "Jana");
+    const petr = await createPerson(repository, "Petr");
+    await createGift(repository, jana.id, "Kniha");
+    await repository.createGift({
+      personId: jana.id,
+      name: "Pro sebe",
+      note: "",
+      priority: "LOW",
+      status: "NEW",
+      buyerPersonId: jana.id,
+    });
+    await repository.createGift({
+      personId: petr.id,
+      name: "Šála",
+      note: "",
+      priority: "LOW",
+      status: "NEW",
+      buyerPersonId: jana.id,
+    });
+
+    expect(await repository.getPersonDeletionImpact(jana.id)).toEqual({
+      giftCount: 2,
+      buyerGiftCount: 1,
+    });
+    expect(await repository.getPersonDeletionImpact(petr.id)).toEqual({
+      giftCount: 1,
+      buyerGiftCount: 0,
+    });
+    expect((await repository.listGifts()).map((gift) => gift.name).sort()).toEqual([
+      "Kniha",
+      "Pro sebe",
+      "Šála",
+    ]);
+  });
+
   it("deletes the person's gifts, links, tags, notification log, and clears them as buyer", async () => {
     const repository = createRepository();
     await repository.initialize();

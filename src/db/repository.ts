@@ -50,6 +50,13 @@ export type CreateGiftLinkInput = Pick<GiftLink, "giftId" | "url" | "title">;
 export type UpdateGiftLinkInput = Partial<Pick<GiftLink, "url" | "title">>;
 export type UpdatePreferencesInput = Partial<AppPreferences>;
 
+export type PersonDeletionImpact = {
+  /** Gifts for this person; they are deleted with the person. */
+  giftCount: number;
+  /** Other people's gifts where this person is the buyer; they stay, the buyer is cleared. */
+  buyerGiftCount: number;
+};
+
 export type GiftListRepository = {
   initialize(): Promise<void>;
   close(): void;
@@ -64,9 +71,12 @@ export type GiftListRepository = {
   updatePerson(id: number, input: UpdatePersonInput): Promise<Person>;
   /** `personIds` must contain every person exactly once, in the new manual order. */
   reorderPeople(personIds: number[]): Promise<void>;
+  /** What deleting the person would remove or change, for the confirmation dialog. */
+  getPersonDeletionImpact(id: number): Promise<PersonDeletionImpact>;
   deletePerson(id: number): Promise<void>;
 
   getGift(id: number): Promise<Gift | undefined>;
+  listGifts(): Promise<Gift[]>;
   listGiftsByPerson(personId: number): Promise<Gift[]>;
   createGift(input: CreateGiftInput): Promise<Gift>;
   updateGift(id: number, input: UpdateGiftInput): Promise<Gift>;
@@ -478,6 +488,23 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       await done;
     },
 
+    async getPersonDeletionImpact(id: number): Promise<PersonDeletionImpact> {
+      assertPositiveId(id, "ID osoby");
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.gifts, "readonly");
+      const done = transactionDone(transaction);
+      const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
+      const giftCount = await requestResult(giftsStore.index("personId").count(id));
+      const buyerGifts = await requestResult(
+        giftsStore.index("buyerPersonId").getAll(id) as IDBRequest<Gift[]>,
+      );
+      await done;
+      return {
+        giftCount,
+        buyerGiftCount: buyerGifts.filter((gift) => gift.personId !== id).length,
+      };
+    },
+
     async deletePerson(id: number): Promise<void> {
       assertPositiveId(id, "ID osoby");
       const db = await connection();
@@ -512,6 +539,10 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
     getGift(id: number): Promise<Gift | undefined> {
       assertPositiveId(id, "ID dárku");
       return readOne<Gift>(STORE_NAMES.gifts, id);
+    },
+
+    listGifts(): Promise<Gift[]> {
+      return readAll<Gift>(STORE_NAMES.gifts);
     },
 
     listGiftsByPerson(personId: number): Promise<Gift[]> {

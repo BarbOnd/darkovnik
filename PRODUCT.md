@@ -30,7 +30,7 @@ The birthday is optional. The user enters day and month, and optionally the year
 - Change avatar
 - Reorder (in manual sort mode)
 
-Changing name or birthday does not automatically change the avatar.
+Changing name or birthday does not change the avatar seed (colors and face). Only the letter shown in the avatar follows the current name (see §16).
 
 Deleting a person requires confirmation. If the person is a buyer on other people's gifts, the confirmation explicitly warns that those gifts remain but their buyer will be cleared.
 
@@ -259,6 +259,8 @@ On first start (and when the user saves the first person), the app calls `naviga
 DiceBear 10.x, style `initial-face`, generated locally via `@dicebear/core` and `@dicebear/styles`. Never use the DiceBear HTTP API.
 
 Each person gets an opaque random `avatarSeed` on creation. The same seed always produces the same avatar. "Změnit avatara" shows a small grid of variants generated from new random seeds; selecting one saves its seed. The seed is never derived from personal data.
+
+Initial Face draws a letter as the mouth and would derive it from the seed. Because the seed is random, the app instead shows the first letter of the person's **current display name** (computed at render time, never stored). Colors and the face come only from the seed.
 
 ## 17. Future sharing
 

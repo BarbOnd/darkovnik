@@ -39,20 +39,20 @@ The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 - [x] `isFreshInstallation()` (no people and no gifts)
 - [x] Tests for all of the above incl. v1 → v2 migration
 
-## Phase 2 — App shell and People
+## Phase 2 — App shell and People ✅
 
-- [ ] App shell: bottom navigation Lidé / Nastavení, routing, system font stack
-- [ ] Theme tokens, light/dark, `prefers-color-scheme`, `theme-color`
-- [ ] Czech plural helper (dárek/dárky/dárků, den/dny/dní, rok/roky/let)
-- [ ] People list with active gift count
-- [ ] Sort switch Abecedně / Vlastní pořadí (persisted)
-- [ ] Add person, edit person
-- [ ] Birthday input: day, month, optional year
-- [ ] Delete person with confirmation; warn when the person is a buyer
-- [ ] DiceBear Initial Face avatar generated locally, persistent random seed
-- [ ] Change avatar (variant grid)
-- [ ] Empty state
-- [ ] Verify no personal data is used as avatar seed
+- [x] App shell: bottom navigation Lidé / Nastavení, routing, system font stack
+- [x] Theme tokens, light/dark, `prefers-color-scheme`, `theme-color`
+- [x] Czech plural helper (dárek/dárky/dárků, den/dny/dní, rok/roky/let)
+- [x] People list with active gift count
+- [x] Sort switch Abecedně / Vlastní pořadí (persisted)
+- [x] Add person, edit person
+- [x] Birthday input: day, month, optional year
+- [x] Delete person with confirmation; warn when the person is a buyer
+- [x] DiceBear Initial Face avatar generated locally, persistent random seed
+- [x] Change avatar (variant grid)
+- [x] Empty state
+- [x] Verify no personal data is used as avatar seed
 
 ## Phase 3 — Gifts
 

@@ -102,7 +102,7 @@ Fields: Jméno, Narozeniny (den, měsíc, rok — rok volitelný), Avatar.
 Three compact fields or selects: Den, Měsíc (Czech month names), Rok (optional). Leaving the year empty means "year unknown". Validate the day against the month (incl. 29 Feb when the year is empty or a leap year).
 
 ### Avatar
-DiceBear `initial-face`, deterministic from `avatarSeed`. "Změnit avatara" opens a small grid (e.g. 6–9 variants) from new random seeds, plus "Další varianty". Selecting one saves its seed.
+DiceBear `initial-face`, deterministic from `avatarSeed`; the letter is the initial of the current name (PRODUCT.md §16). "Změnit avatara" opens a small grid (e.g. 6–9 variants) from new random seeds, plus "Další varianty". Selecting one saves its seed.
 
 ## Gift form
 
