@@ -1,0 +1,825 @@
+import { isValidBirthday } from "../domain/birthday";
+import {
+  GIFT_PRIORITIES,
+  GIFT_SORT_MODES,
+  GIFT_STATUSES,
+  isOneOf,
+  PEOPLE_SORT_MODES,
+  THEMES,
+  type Gift,
+  type GiftLink,
+  type GiftTag,
+  type NotificationLogEntry,
+  type Person,
+  type Tag,
+} from "../domain/entities";
+import { compareBySortOrder } from "../domain/sorting";
+import {
+  ALL_STORE_NAMES,
+  DATABASE_NAME,
+  DATABASE_VERSION,
+  openGiftListDatabase,
+  STORE_NAMES,
+  type StoreName,
+} from "./database";
+import { requestResult, transactionDone } from "./idb";
+import {
+  DEFAULT_V2_PREFERENCES,
+  METADATA_KEY,
+  type AppMetadata,
+  type AppPreferences,
+  type MetadataRecord,
+} from "./metadata";
+
+export type { AppMetadata, AppPreferences } from "./metadata";
+
+const DEFAULT_TAG_NAMES = ["Vánoce", "Narozeniny", "Výročí"] as const;
+
+type CounterName = "people" | "gifts" | "tags" | "giftLinks";
+
+export type CreatePersonInput = Pick<Person, "name" | "birthday" | "avatarSeed">;
+export type UpdatePersonInput = Partial<CreatePersonInput>;
+export type CreateGiftInput = Pick<
+  Gift,
+  "personId" | "name" | "note" | "priority" | "status" | "buyerPersonId"
+>;
+export type UpdateGiftInput = Partial<CreateGiftInput>;
+export type CreateTagInput = Pick<Tag, "name">;
+export type CreateGiftLinkInput = Pick<GiftLink, "giftId" | "url" | "title">;
+/** An empty `title` removes the title; an omitted field stays unchanged. */
+export type UpdateGiftLinkInput = Partial<Pick<GiftLink, "url" | "title">>;
+export type UpdatePreferencesInput = Partial<AppPreferences>;
+
+export type GiftListRepository = {
+  initialize(): Promise<void>;
+  close(): void;
+  getMetadata(): Promise<AppMetadata>;
+  updatePreferences(input: UpdatePreferencesInput): Promise<AppMetadata>;
+  /** Fresh = no people and no gifts (DATABASE.md → Fresh installation). */
+  isFreshInstallation(): Promise<boolean>;
+
+  getPerson(id: number): Promise<Person | undefined>;
+  listPeople(): Promise<Person[]>;
+  createPerson(input: CreatePersonInput): Promise<Person>;
+  updatePerson(id: number, input: UpdatePersonInput): Promise<Person>;
+  /** `personIds` must contain every person exactly once, in the new manual order. */
+  reorderPeople(personIds: number[]): Promise<void>;
+  deletePerson(id: number): Promise<void>;
+
+  getGift(id: number): Promise<Gift | undefined>;
+  listGiftsByPerson(personId: number): Promise<Gift[]>;
+  createGift(input: CreateGiftInput): Promise<Gift>;
+  updateGift(id: number, input: UpdateGiftInput): Promise<Gift>;
+  /** `giftIds` must contain every gift of the recipient exactly once, in the new manual order. */
+  reorderGifts(personId: number, giftIds: number[]): Promise<void>;
+  deleteGift(id: number): Promise<void>;
+
+  listTags(): Promise<Tag[]>;
+  createTag(input: CreateTagInput): Promise<Tag>;
+  renameTag(id: number, name: string): Promise<Tag>;
+  deleteTag(id: number): Promise<void>;
+
+  /** Links of one gift ordered by sortOrder. */
+  listGiftLinks(giftId: number): Promise<GiftLink[]>;
+  /** Appends the link at the end of the gift's links. */
+  createGiftLink(input: CreateGiftLinkInput): Promise<GiftLink>;
+  updateGiftLink(id: number, input: UpdateGiftLinkInput): Promise<GiftLink>;
+  /** `linkIds` must contain every link of the gift exactly once, in the new order. */
+  reorderGiftLinks(giftId: number, linkIds: number[]): Promise<void>;
+  deleteGiftLink(id: number): Promise<void>;
+
+  listGiftTagIds(giftId: number): Promise<number[]>;
+  createGiftTag(association: GiftTag): Promise<GiftTag>;
+  /** Replaces the gift's tag associations with exactly `tagIds`. */
+  setGiftTags(giftId: number, tagIds: number[]): Promise<void>;
+};
+
+export type RepositoryOptions = {
+  databaseName?: string;
+  now?: () => Date;
+};
+
+function isPositiveId(id: number): boolean {
+  return Number.isSafeInteger(id) && id > 0;
+}
+
+function assertPositiveId(id: number, field: string): void {
+  if (!isPositiveId(id)) throw new Error(`${field} musí být kladné celé číslo.`);
+}
+
+function assertNonEmpty(value: string, field: string): void {
+  if (value.trim().length === 0) throw new Error(`${field} nesmí být prázdný.`);
+}
+
+function assertHttpUrl(value: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error("Odkaz musí být platná HTTP nebo HTTPS adresa.");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Odkaz musí být platná HTTP nebo HTTPS adresa.");
+  }
+}
+
+function assertBirthday(birthday: string | null): void {
+  if (birthday !== null && !isValidBirthday(birthday)) {
+    throw new Error("Datum narozenin není platné.");
+  }
+}
+
+function assertGiftFields(input: UpdateGiftInput): void {
+  if (input.personId !== undefined) assertPositiveId(input.personId, "ID příjemce");
+  if (input.buyerPersonId !== undefined && input.buyerPersonId !== null) {
+    assertPositiveId(input.buyerPersonId, "ID kupujícího");
+  }
+  if (input.name !== undefined) assertNonEmpty(input.name, "Název dárku");
+  if (input.note !== undefined && typeof input.note !== "string") {
+    throw new Error("Poznámka musí být text.");
+  }
+  if (input.priority !== undefined && !isOneOf(GIFT_PRIORITIES, input.priority)) {
+    throw new Error("Neplatná priorita dárku.");
+  }
+  if (input.status !== undefined && !isOneOf(GIFT_STATUSES, input.status)) {
+    throw new Error("Neplatný stav dárku.");
+  }
+}
+
+function assertPreferences(input: UpdatePreferencesInput): void {
+  if (
+    input.birthdayNotificationsEnabled !== undefined &&
+    typeof input.birthdayNotificationsEnabled !== "boolean"
+  ) {
+    throw new Error("Nastavení upozornění musí být zapnuto nebo vypnuto.");
+  }
+  if (
+    input.lastExportAt !== undefined &&
+    input.lastExportAt !== null &&
+    (typeof input.lastExportAt !== "string" || Number.isNaN(Date.parse(input.lastExportAt)))
+  ) {
+    throw new Error("Datum poslední zálohy není platné.");
+  }
+  if (input.peopleSortMode !== undefined && !isOneOf(PEOPLE_SORT_MODES, input.peopleSortMode)) {
+    throw new Error("Neplatné řazení lidí.");
+  }
+  if (input.giftSortMode !== undefined && !isOneOf(GIFT_SORT_MODES, input.giftSortMode)) {
+    throw new Error("Neplatné řazení dárků.");
+  }
+  if (input.theme !== undefined && !isOneOf(THEMES, input.theme)) {
+    throw new Error("Neplatný vzhled.");
+  }
+}
+
+/** Throws unless `ids` contains every ID of `existingIds` exactly once. */
+function assertPermutation(ids: number[], existingIds: number[], message: string): void {
+  const expected = new Set(existingIds);
+  const seen = new Set<number>();
+  for (const id of ids) {
+    if (!expected.has(id) || seen.has(id)) throw new Error(message);
+    seen.add(id);
+  }
+  if (seen.size !== expected.size) throw new Error(message);
+}
+
+function normalizeTagName(name: string): string {
+  return name.trim().toLocaleLowerCase("cs-CZ");
+}
+
+function normalizeLinkTitle(title: string | undefined): string | undefined {
+  const trimmed = title?.trim();
+  return trimmed === undefined || trimmed.length === 0 ? undefined : trimmed;
+}
+
+function createGiftLinkRecord(link: GiftLink): GiftLink {
+  const { title, ...rest } = link;
+  const normalizedTitle = normalizeLinkTitle(title);
+  return normalizedTitle === undefined ? rest : { ...rest, title: normalizedTitle };
+}
+
+function createMetadata(): MetadataRecord {
+  return {
+    key: METADATA_KEY,
+    schemaVersion: DATABASE_VERSION,
+    highestPersonId: 0,
+    highestGiftId: 0,
+    highestTagId: 0,
+    highestGiftLinkId: 0,
+    birthdayNotificationsEnabled: false,
+    ...DEFAULT_V2_PREFERENCES,
+    initializationComplete: true,
+  };
+}
+
+function toAppMetadata(metadata: MetadataRecord): AppMetadata {
+  return {
+    schemaVersion: metadata.schemaVersion,
+    highestPersonId: metadata.highestPersonId,
+    highestGiftId: metadata.highestGiftId,
+    highestTagId: metadata.highestTagId,
+    highestGiftLinkId: metadata.highestGiftLinkId,
+    birthdayNotificationsEnabled: metadata.birthdayNotificationsEnabled,
+    lastExportAt: metadata.lastExportAt,
+    peopleSortMode: metadata.peopleSortMode,
+    giftSortMode: metadata.giftSortMode,
+    theme: metadata.theme,
+    initializationComplete: metadata.initializationComplete,
+  };
+}
+
+function counterField(counter: CounterName): keyof Pick<
+  AppMetadata,
+  "highestPersonId" | "highestGiftId" | "highestTagId" | "highestGiftLinkId"
+> {
+  const fields = {
+    people: "highestPersonId",
+    gifts: "highestGiftId",
+    tags: "highestTagId",
+    giftLinks: "highestGiftLinkId",
+  } as const;
+  return fields[counter];
+}
+
+function allocateId(metadata: MetadataRecord, counter: CounterName): number {
+  const field = counterField(counter);
+  const nextId = metadata[field] + 1;
+  if (!Number.isSafeInteger(nextId)) throw new Error("Byl dosažen limit lokálních identifikátorů.");
+  metadata[field] = nextId;
+  return nextId;
+}
+
+/** Writes `records` with sortOrder 0..n-1 in the given order (only changed records are written). */
+function writeSortOrder<T extends { sortOrder: number }>(store: IDBObjectStore, records: T[], offset = 0): void {
+  records.forEach((record, index) => {
+    if (record.sortOrder !== index + offset) store.put({ ...record, sortOrder: index + offset });
+  });
+}
+
+export function createGiftListRepository(options: RepositoryOptions = {}): GiftListRepository {
+  const databaseName = options.databaseName ?? DATABASE_NAME;
+  const now = options.now ?? (() => new Date());
+  let database: IDBDatabase | undefined;
+
+  async function connection(): Promise<IDBDatabase> {
+    database ??= await openGiftListDatabase(databaseName);
+    return database;
+  }
+
+  async function getMetadataFromStore(store: IDBObjectStore): Promise<MetadataRecord> {
+    const metadata = await requestResult(store.get(METADATA_KEY) as IDBRequest<MetadataRecord | undefined>);
+    if (metadata === undefined) throw new Error("Databáze není inicializována.");
+    return metadata;
+  }
+
+  async function readOne<T>(storeName: StoreName, id: IDBValidKey): Promise<T | undefined> {
+    const db = await connection();
+    const transaction = db.transaction(storeName, "readonly");
+    const done = transactionDone(transaction);
+    const entity = await requestResult(
+      transaction.objectStore(storeName).get(id) as IDBRequest<T | undefined>,
+    );
+    await done;
+    return entity;
+  }
+
+  async function readAll<T>(storeName: StoreName, indexName?: string, query?: IDBValidKey): Promise<T[]> {
+    const db = await connection();
+    const transaction = db.transaction(storeName, "readonly");
+    const done = transactionDone(transaction);
+    const store = transaction.objectStore(storeName);
+    const source = indexName === undefined ? store : store.index(indexName);
+    const entities = await requestResult(source.getAll(query) as IDBRequest<T[]>);
+    await done;
+    return entities;
+  }
+
+  async function entityMustExist<T>(store: IDBObjectStore, id: number, message: string): Promise<T> {
+    const entity = await requestResult(store.get(id) as IDBRequest<T | undefined>);
+    if (entity === undefined) throw new Error(message);
+    return entity;
+  }
+
+  async function linksOfGift(store: IDBObjectStore, giftId: number): Promise<GiftLink[]> {
+    const links = await requestResult(store.index("giftId").getAll(giftId) as IDBRequest<GiftLink[]>);
+    return links.sort(compareBySortOrder);
+  }
+
+  async function giftsOfPerson(store: IDBObjectStore, personId: number): Promise<Gift[]> {
+    const gifts = await requestResult(store.index("personId").getAll(personId) as IDBRequest<Gift[]>);
+    return gifts.sort(compareBySortOrder);
+  }
+
+  async function deleteGiftDependencies(
+    transaction: IDBTransaction,
+    giftId: number,
+  ): Promise<void> {
+    const giftLinks = transaction.objectStore(STORE_NAMES.giftLinks);
+    const giftTags = transaction.objectStore(STORE_NAMES.giftTags);
+    const links = await requestResult(
+      giftLinks.index("giftId").getAll(giftId) as IDBRequest<GiftLink[]>,
+    );
+    const associations = await requestResult(
+      giftTags.index("giftId").getAll(giftId) as IDBRequest<GiftTag[]>,
+    );
+    links.forEach((link) => giftLinks.delete(link.id));
+    associations.forEach((association) => giftTags.delete([association.giftId, association.tagId]));
+  }
+
+  async function assertUniqueTagName(store: IDBObjectStore, name: string, ownId?: number): Promise<void> {
+    const existingTags = await requestResult(store.getAll() as IDBRequest<Tag[]>);
+    if (
+      existingTags.some(
+        (tag) => tag.id !== ownId && normalizeTagName(tag.name) === normalizeTagName(name),
+      )
+    ) {
+      throw new Error("Tag s tímto názvem už existuje.");
+    }
+  }
+
+  return {
+    async initialize(): Promise<void> {
+      const db = await connection();
+      const transaction = db.transaction([STORE_NAMES.metadata, STORE_NAMES.tags], "readwrite");
+      const done = transactionDone(transaction);
+      const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+      const metadata = await requestResult(
+        metadataStore.get(METADATA_KEY) as IDBRequest<MetadataRecord | undefined>,
+      );
+
+      if (metadata === undefined) {
+        const initialMetadata = createMetadata();
+        const tags = transaction.objectStore(STORE_NAMES.tags);
+        const timestamp = now().toISOString();
+        DEFAULT_TAG_NAMES.forEach((name) => {
+          const id = allocateId(initialMetadata, "tags");
+          tags.put({ id, name, createdAt: timestamp, updatedAt: timestamp } satisfies Tag);
+        });
+        metadataStore.put(initialMetadata);
+      }
+
+      await done;
+    },
+
+    close(): void {
+      database?.close();
+      database = undefined;
+    },
+
+    async getMetadata(): Promise<AppMetadata> {
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.metadata, "readonly");
+      const done = transactionDone(transaction);
+      const metadata = await getMetadataFromStore(transaction.objectStore(STORE_NAMES.metadata));
+      await done;
+      return toAppMetadata(metadata);
+    },
+
+    async updatePreferences(input: UpdatePreferencesInput): Promise<AppMetadata> {
+      assertPreferences(input);
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.metadata, "readwrite");
+      const done = transactionDone(transaction);
+      const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+      const metadata = await getMetadataFromStore(metadataStore);
+      if (input.birthdayNotificationsEnabled !== undefined) {
+        metadata.birthdayNotificationsEnabled = input.birthdayNotificationsEnabled;
+      }
+      if (input.lastExportAt !== undefined) metadata.lastExportAt = input.lastExportAt;
+      if (input.peopleSortMode !== undefined) metadata.peopleSortMode = input.peopleSortMode;
+      if (input.giftSortMode !== undefined) metadata.giftSortMode = input.giftSortMode;
+      if (input.theme !== undefined) metadata.theme = input.theme;
+      metadataStore.put(metadata);
+      await done;
+      return toAppMetadata(metadata);
+    },
+
+    async isFreshInstallation(): Promise<boolean> {
+      const db = await connection();
+      const transaction = db.transaction([STORE_NAMES.people, STORE_NAMES.gifts], "readonly");
+      const done = transactionDone(transaction);
+      const peopleCount = await requestResult(transaction.objectStore(STORE_NAMES.people).count());
+      const giftCount = await requestResult(transaction.objectStore(STORE_NAMES.gifts).count());
+      await done;
+      return peopleCount === 0 && giftCount === 0;
+    },
+
+    getPerson(id: number): Promise<Person | undefined> {
+      assertPositiveId(id, "ID osoby");
+      return readOne<Person>(STORE_NAMES.people, id);
+    },
+
+    listPeople(): Promise<Person[]> {
+      return readAll<Person>(STORE_NAMES.people);
+    },
+
+    async createPerson(input: CreatePersonInput): Promise<Person> {
+      assertNonEmpty(input.name, "Jméno");
+      assertBirthday(input.birthday);
+      assertNonEmpty(input.avatarSeed, "Avatar seed");
+      const db = await connection();
+      const transaction = db.transaction([STORE_NAMES.people, STORE_NAMES.metadata], "readwrite");
+      const done = transactionDone(transaction);
+      const peopleStore = transaction.objectStore(STORE_NAMES.people);
+      const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+      const metadata = await getMetadataFromStore(metadataStore);
+      const existingPeople = await requestResult(peopleStore.getAll() as IDBRequest<Person[]>);
+      const timestamp = now().toISOString();
+      const person: Person = {
+        id: allocateId(metadata, "people"),
+        name: input.name.trim(),
+        birthday: input.birthday,
+        avatarSeed: input.avatarSeed,
+        sortOrder: 0,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      writeSortOrder(peopleStore, existingPeople.sort(compareBySortOrder), 1);
+      peopleStore.put(person);
+      metadataStore.put(metadata);
+      await done;
+      return person;
+    },
+
+    async updatePerson(id: number, input: UpdatePersonInput): Promise<Person> {
+      assertPositiveId(id, "ID osoby");
+      if (input.name !== undefined) assertNonEmpty(input.name, "Jméno");
+      if (input.birthday !== undefined) assertBirthday(input.birthday);
+      if (input.avatarSeed !== undefined) assertNonEmpty(input.avatarSeed, "Avatar seed");
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.people, "readwrite");
+      const done = transactionDone(transaction);
+      const peopleStore = transaction.objectStore(STORE_NAMES.people);
+      const person = await entityMustExist<Person>(peopleStore, id, "Osoba neexistuje.");
+      const updated: Person = {
+        ...person,
+        name: input.name?.trim() ?? person.name,
+        birthday: input.birthday !== undefined ? input.birthday : person.birthday,
+        avatarSeed: input.avatarSeed ?? person.avatarSeed,
+        updatedAt: now().toISOString(),
+      };
+      peopleStore.put(updated);
+      await done;
+      return updated;
+    },
+
+    async reorderPeople(personIds: number[]): Promise<void> {
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.people, "readwrite");
+      const done = transactionDone(transaction);
+      const peopleStore = transaction.objectStore(STORE_NAMES.people);
+      const people = await requestResult(peopleStore.getAll() as IDBRequest<Person[]>);
+      assertPermutation(
+        personIds,
+        people.map((person) => person.id),
+        "Nové pořadí musí obsahovat každou osobu právě jednou.",
+      );
+      const byId = new Map(people.map((person) => [person.id, person]));
+      writeSortOrder(peopleStore, personIds.map((personId) => byId.get(personId) as Person));
+      await done;
+    },
+
+    async deletePerson(id: number): Promise<void> {
+      assertPositiveId(id, "ID osoby");
+      const db = await connection();
+      const transaction = db.transaction(ALL_STORE_NAMES, "readwrite");
+      const done = transactionDone(transaction);
+      const people = transaction.objectStore(STORE_NAMES.people);
+      await entityMustExist<Person>(people, id, "Osoba neexistuje.");
+      const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
+      const recipientGifts = await requestResult(
+        giftsStore.index("personId").getAll(id) as IDBRequest<Gift[]>,
+      );
+      const buyerGifts = await requestResult(
+        giftsStore.index("buyerPersonId").getAll(id) as IDBRequest<Gift[]>,
+      );
+      for (const gift of recipientGifts) {
+        await deleteGiftDependencies(transaction, gift.id);
+        giftsStore.delete(gift.id);
+      }
+      const timestamp = now().toISOString();
+      buyerGifts
+        .filter((gift) => gift.personId !== id)
+        .forEach((gift) => giftsStore.put({ ...gift, buyerPersonId: null, updatedAt: timestamp }));
+      const notificationLog = transaction.objectStore(STORE_NAMES.notificationLog);
+      const logEntries = await requestResult(
+        notificationLog.index("personId").getAll(id) as IDBRequest<NotificationLogEntry[]>,
+      );
+      logEntries.forEach((entry) => notificationLog.delete(entry.key));
+      people.delete(id);
+      await done;
+    },
+
+    getGift(id: number): Promise<Gift | undefined> {
+      assertPositiveId(id, "ID dárku");
+      return readOne<Gift>(STORE_NAMES.gifts, id);
+    },
+
+    listGiftsByPerson(personId: number): Promise<Gift[]> {
+      assertPositiveId(personId, "ID osoby");
+      return readAll<Gift>(STORE_NAMES.gifts, "personId", personId);
+    },
+
+    async createGift(input: CreateGiftInput): Promise<Gift> {
+      assertGiftFields(input);
+      const db = await connection();
+      const transaction = db.transaction(
+        [STORE_NAMES.people, STORE_NAMES.gifts, STORE_NAMES.metadata],
+        "readwrite",
+      );
+      const done = transactionDone(transaction);
+      const people = transaction.objectStore(STORE_NAMES.people);
+      await entityMustExist<Person>(people, input.personId, "Příjemce dárku neexistuje.");
+      if (input.buyerPersonId !== null) {
+        await entityMustExist<Person>(people, input.buyerPersonId, "Kupující dárku neexistuje.");
+      }
+      const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
+      const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+      const metadata = await getMetadataFromStore(metadataStore);
+      const recipientGifts = await giftsOfPerson(giftsStore, input.personId);
+      const timestamp = now().toISOString();
+      const gift: Gift = {
+        id: allocateId(metadata, "gifts"),
+        personId: input.personId,
+        name: input.name,
+        note: input.note,
+        priority: input.priority,
+        status: input.status,
+        buyerPersonId: input.buyerPersonId,
+        sortOrder: 0,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      writeSortOrder(giftsStore, recipientGifts, 1);
+      giftsStore.put(gift);
+      metadataStore.put(metadata);
+      await done;
+      return gift;
+    },
+
+    async updateGift(id: number, input: UpdateGiftInput): Promise<Gift> {
+      assertPositiveId(id, "ID dárku");
+      assertGiftFields(input);
+      const db = await connection();
+      const transaction = db.transaction([STORE_NAMES.people, STORE_NAMES.gifts], "readwrite");
+      const done = transactionDone(transaction);
+      const people = transaction.objectStore(STORE_NAMES.people);
+      const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
+      const gift = await entityMustExist<Gift>(giftsStore, id, "Dárek neexistuje.");
+      const updated: Gift = {
+        ...gift,
+        personId: input.personId ?? gift.personId,
+        name: input.name ?? gift.name,
+        note: input.note ?? gift.note,
+        priority: input.priority ?? gift.priority,
+        status: input.status ?? gift.status,
+        buyerPersonId: input.buyerPersonId !== undefined ? input.buyerPersonId : gift.buyerPersonId,
+        updatedAt: now().toISOString(),
+      };
+      if (updated.buyerPersonId !== null && updated.buyerPersonId !== gift.buyerPersonId) {
+        await entityMustExist<Person>(people, updated.buyerPersonId, "Kupující dárku neexistuje.");
+      }
+      if (updated.personId !== gift.personId) {
+        await entityMustExist<Person>(people, updated.personId, "Příjemce dárku neexistuje.");
+        // A moved gift goes to the top of the new recipient's manual order.
+        writeSortOrder(giftsStore, await giftsOfPerson(giftsStore, updated.personId), 1);
+        updated.sortOrder = 0;
+      }
+      giftsStore.put(updated);
+      await done;
+      return updated;
+    },
+
+    async reorderGifts(personId: number, giftIds: number[]): Promise<void> {
+      assertPositiveId(personId, "ID osoby");
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.gifts, "readwrite");
+      const done = transactionDone(transaction);
+      const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
+      const gifts = await giftsOfPerson(giftsStore, personId);
+      assertPermutation(
+        giftIds,
+        gifts.map((gift) => gift.id),
+        "Nové pořadí musí obsahovat každý dárek osoby právě jednou.",
+      );
+      const byId = new Map(gifts.map((gift) => [gift.id, gift]));
+      writeSortOrder(giftsStore, giftIds.map((giftId) => byId.get(giftId) as Gift));
+      await done;
+    },
+
+    async deleteGift(id: number): Promise<void> {
+      assertPositiveId(id, "ID dárku");
+      const db = await connection();
+      const transaction = db.transaction(
+        [STORE_NAMES.gifts, STORE_NAMES.giftLinks, STORE_NAMES.giftTags],
+        "readwrite",
+      );
+      const done = transactionDone(transaction);
+      await entityMustExist<Gift>(transaction.objectStore(STORE_NAMES.gifts), id, "Dárek neexistuje.");
+      await deleteGiftDependencies(transaction, id);
+      transaction.objectStore(STORE_NAMES.gifts).delete(id);
+      await done;
+    },
+
+    listTags(): Promise<Tag[]> {
+      return readAll<Tag>(STORE_NAMES.tags);
+    },
+
+    async createTag(input: CreateTagInput): Promise<Tag> {
+      assertNonEmpty(input.name, "Název tagu");
+      const db = await connection();
+      const transaction = db.transaction([STORE_NAMES.tags, STORE_NAMES.metadata], "readwrite");
+      const done = transactionDone(transaction);
+      const tagsStore = transaction.objectStore(STORE_NAMES.tags);
+      await assertUniqueTagName(tagsStore, input.name);
+      const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+      const metadata = await getMetadataFromStore(metadataStore);
+      const timestamp = now().toISOString();
+      const tag: Tag = {
+        id: allocateId(metadata, "tags"),
+        name: input.name.trim(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      tagsStore.put(tag);
+      metadataStore.put(metadata);
+      await done;
+      return tag;
+    },
+
+    async renameTag(id: number, name: string): Promise<Tag> {
+      assertPositiveId(id, "ID tagu");
+      assertNonEmpty(name, "Název tagu");
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.tags, "readwrite");
+      const done = transactionDone(transaction);
+      const tagsStore = transaction.objectStore(STORE_NAMES.tags);
+      const tag = await entityMustExist<Tag>(tagsStore, id, "Tag neexistuje.");
+      await assertUniqueTagName(tagsStore, name, id);
+      const updated: Tag = { ...tag, name: name.trim(), updatedAt: now().toISOString() };
+      tagsStore.put(updated);
+      await done;
+      return updated;
+    },
+
+    async deleteTag(id: number): Promise<void> {
+      assertPositiveId(id, "ID tagu");
+      const db = await connection();
+      const transaction = db.transaction([STORE_NAMES.tags, STORE_NAMES.giftTags], "readwrite");
+      const done = transactionDone(transaction);
+      const tags = transaction.objectStore(STORE_NAMES.tags);
+      await entityMustExist<Tag>(tags, id, "Tag neexistuje.");
+      const giftTags = transaction.objectStore(STORE_NAMES.giftTags);
+      const associations = await requestResult(
+        giftTags.index("tagId").getAll(id) as IDBRequest<GiftTag[]>,
+      );
+      associations.forEach((association) => giftTags.delete([association.giftId, association.tagId]));
+      tags.delete(id);
+      await done;
+    },
+
+    async listGiftLinks(giftId: number): Promise<GiftLink[]> {
+      assertPositiveId(giftId, "ID dárku");
+      const links = await readAll<GiftLink>(STORE_NAMES.giftLinks, "giftId", giftId);
+      return links.sort(compareBySortOrder);
+    },
+
+    async createGiftLink(input: CreateGiftLinkInput): Promise<GiftLink> {
+      assertPositiveId(input.giftId, "ID dárku");
+      assertHttpUrl(input.url);
+      const db = await connection();
+      const transaction = db.transaction(
+        [STORE_NAMES.gifts, STORE_NAMES.giftLinks, STORE_NAMES.metadata],
+        "readwrite",
+      );
+      const done = transactionDone(transaction);
+      await entityMustExist<Gift>(
+        transaction.objectStore(STORE_NAMES.gifts),
+        input.giftId,
+        "Dárek pro odkaz neexistuje.",
+      );
+      const giftLinksStore = transaction.objectStore(STORE_NAMES.giftLinks);
+      const existingLinks = await linksOfGift(giftLinksStore, input.giftId);
+      const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+      const metadata = await getMetadataFromStore(metadataStore);
+      const link = createGiftLinkRecord({
+        id: allocateId(metadata, "giftLinks"),
+        giftId: input.giftId,
+        url: input.url,
+        title: input.title,
+        sortOrder: existingLinks.length,
+      });
+      writeSortOrder(giftLinksStore, existingLinks);
+      giftLinksStore.put(link);
+      metadataStore.put(metadata);
+      await done;
+      return link;
+    },
+
+    async updateGiftLink(id: number, input: UpdateGiftLinkInput): Promise<GiftLink> {
+      assertPositiveId(id, "ID odkazu");
+      if (input.url !== undefined) assertHttpUrl(input.url);
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.giftLinks, "readwrite");
+      const done = transactionDone(transaction);
+      const giftLinksStore = transaction.objectStore(STORE_NAMES.giftLinks);
+      const link = await entityMustExist<GiftLink>(giftLinksStore, id, "Odkaz neexistuje.");
+      const updated = createGiftLinkRecord({
+        ...link,
+        url: input.url ?? link.url,
+        title: input.title !== undefined ? input.title : link.title,
+      });
+      giftLinksStore.put(updated);
+      await done;
+      return updated;
+    },
+
+    async reorderGiftLinks(giftId: number, linkIds: number[]): Promise<void> {
+      assertPositiveId(giftId, "ID dárku");
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.giftLinks, "readwrite");
+      const done = transactionDone(transaction);
+      const giftLinksStore = transaction.objectStore(STORE_NAMES.giftLinks);
+      const links = await linksOfGift(giftLinksStore, giftId);
+      assertPermutation(
+        linkIds,
+        links.map((link) => link.id),
+        "Nové pořadí musí obsahovat každý odkaz dárku právě jednou.",
+      );
+      const byId = new Map(links.map((link) => [link.id, link]));
+      writeSortOrder(giftLinksStore, linkIds.map((linkId) => byId.get(linkId) as GiftLink));
+      await done;
+    },
+
+    async deleteGiftLink(id: number): Promise<void> {
+      assertPositiveId(id, "ID odkazu");
+      const db = await connection();
+      const transaction = db.transaction(STORE_NAMES.giftLinks, "readwrite");
+      const done = transactionDone(transaction);
+      const giftLinksStore = transaction.objectStore(STORE_NAMES.giftLinks);
+      const link = await entityMustExist<GiftLink>(giftLinksStore, id, "Odkaz neexistuje.");
+      giftLinksStore.delete(id);
+      const remaining = (await linksOfGift(giftLinksStore, link.giftId)).filter(
+        (other) => other.id !== id,
+      );
+      writeSortOrder(giftLinksStore, remaining);
+      await done;
+    },
+
+    async listGiftTagIds(giftId: number): Promise<number[]> {
+      assertPositiveId(giftId, "ID dárku");
+      const associations = await readAll<GiftTag>(STORE_NAMES.giftTags, "giftId", giftId);
+      return associations.map((association) => association.tagId).sort((a, b) => a - b);
+    },
+
+    async createGiftTag(association: GiftTag): Promise<GiftTag> {
+      assertPositiveId(association.giftId, "ID dárku");
+      assertPositiveId(association.tagId, "ID tagu");
+      const db = await connection();
+      const transaction = db.transaction([STORE_NAMES.gifts, STORE_NAMES.tags, STORE_NAMES.giftTags], "readwrite");
+      const done = transactionDone(transaction);
+      await entityMustExist<Gift>(
+        transaction.objectStore(STORE_NAMES.gifts),
+        association.giftId,
+        "Dárek pro tag neexistuje.",
+      );
+      await entityMustExist<Tag>(
+        transaction.objectStore(STORE_NAMES.tags),
+        association.tagId,
+        "Tag neexistuje.",
+      );
+      transaction.objectStore(STORE_NAMES.giftTags).put(association);
+      await done;
+      return association;
+    },
+
+    async setGiftTags(giftId: number, tagIds: number[]): Promise<void> {
+      assertPositiveId(giftId, "ID dárku");
+      tagIds.forEach((tagId) => assertPositiveId(tagId, "ID tagu"));
+      const wanted = new Set(tagIds);
+      const db = await connection();
+      const transaction = db.transaction([STORE_NAMES.gifts, STORE_NAMES.tags, STORE_NAMES.giftTags], "readwrite");
+      const done = transactionDone(transaction);
+      await entityMustExist<Gift>(
+        transaction.objectStore(STORE_NAMES.gifts),
+        giftId,
+        "Dárek pro tag neexistuje.",
+      );
+      const tagsStore = transaction.objectStore(STORE_NAMES.tags);
+      for (const tagId of wanted) {
+        await entityMustExist<Tag>(tagsStore, tagId, "Tag neexistuje.");
+      }
+      const giftTags = transaction.objectStore(STORE_NAMES.giftTags);
+      const current = await requestResult(
+        giftTags.index("giftId").getAll(giftId) as IDBRequest<GiftTag[]>,
+      );
+      const currentTagIds = new Set(current.map((association) => association.tagId));
+      current
+        .filter((association) => !wanted.has(association.tagId))
+        .forEach((association) => giftTags.delete([association.giftId, association.tagId]));
+      wanted.forEach((tagId) => {
+        if (!currentTagIds.has(tagId)) giftTags.put({ giftId, tagId } satisfies GiftTag);
+      });
+      await done;
+    },
+  };
+}

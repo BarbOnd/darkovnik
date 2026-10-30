@@ -1,0 +1,18 @@
+{
+  "name": "GiftList",
+  "short_name": "GiftList",
+  "description": "Osobní správce nápadů na dárky.",
+  "lang": "cs",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffaf7",
+  "theme_color": "#9a503d",
+  "icons": [
+    {
+      "src": "/icons/giftlist.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
