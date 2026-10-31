@@ -34,6 +34,8 @@ export type Person = {
   photoSource: string | null;
   /** Crop position within photoSource; null without photo. */
   photoCrop: CropView | null;
+  /** Free-form note about the person (sizes, interests, what they already have); "" when empty. */
+  note: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -47,6 +49,8 @@ export type Gift = {
   priority: GiftPriority;
   status: GiftStatus;
   buyerPersonId: number | null;
+  /** Expected price in CZK (whole or with up to two decimals), or null when unknown. */
+  price: number | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

@@ -15,9 +15,11 @@ import {
   type GiftFilter,
   type StatusFilter,
 } from "../../domain/giftFilters";
+import { summarizePrices } from "../../domain/gifts";
 import { linkLabel } from "../../domain/links";
 import { compareBySortOrder, compareTagsByName, givenLast, reorderSubset, sortGifts } from "../../domain/sorting";
-import { formatCount, LINK_FORMS } from "../../lib/plural";
+import { formatPrice } from "../../lib/format";
+import { formatCount, GIFT_FORMS, LINK_FORMS } from "../../lib/plural";
 import { useLoad } from "../../lib/useLoad";
 import { PriorityStars } from "./PriorityStars";
 
@@ -93,6 +95,7 @@ function GiftSummary({ gift, data }: { gift: Gift; data: GiftData }) {
         <span className="gift-row__name">{gift.name}</span>
         <span className="gift-row__meta">
           <PriorityStars priority={gift.priority} />
+          {gift.price !== null && <span>{formatPrice(gift.price)}</span>}
           {gift.status === "GIVEN" && <span>Předáno {new Date(gift.updatedAt).getFullYear()}</span>}
           {buyer !== undefined && <span>Koupí: {buyer.name}</span>}
           {tagNames.map((name) => (
@@ -206,6 +209,7 @@ function GiftRows({ personId, data, onReordered }: { personId: number; data: Gif
   // Given gifts stay at the end, so only the others are reordered (given ones keep their manual slots).
   const reorderable = visible.filter((gift) => gift.status !== "GIVEN");
   const reorderAllowed = canReorderWithFilter(filter);
+  const prices = summarizePrices(visible);
 
   function startReordering() {
     manualOrder.current = sortGifts(data.gifts, "MANUAL").map((gift) => gift.id);
@@ -299,6 +303,13 @@ function GiftRows({ personId, data, onReordered }: { personId: number; data: Gif
             );
           })}
         </ul>
+      )}
+
+      {prices.priced > 0 && (
+        <p className="gift-list__total muted">
+          Celkem {formatPrice(prices.total)}
+          {prices.unpriced > 0 && ` · ${formatCount(prices.unpriced, GIFT_FORMS)} bez ceny`}
+        </p>
       )}
 
       {manual && reorderAllowed && reorderable.length > 1 && (

@@ -160,11 +160,12 @@ Phases 2b and the quick-add details were added on the user's request during deve
 - [x] Duplicate hint in quick add (same name for a selected recipient)
 - [ ] Verify the share sheet entry and backup sharing on Android (after phase 9)
 
-## Phase 11 — Improvements from the review (part 2, schema version 6)
+## Phase 11 — Improvements from the review (part 2, schema version 6) ✅
 
-- [ ] Person note (sizes, interests, what they already have)
-- [ ] Gift price / budget, sum per person
-- [ ] Search across all gifts from the People screen
+- [x] Person note (sizes, interests, what they already have) in the form and detail
+- [x] Gift price (Kč) in the details, shown in the row, total of the visible gifts under the list
+- [x] Search across all gifts from the People screen
+- [x] IndexedDB version 6 migration + test; backup keeps format 1 (`note`, `price` optional on import)
 
 ## Phase 9 — Release
 

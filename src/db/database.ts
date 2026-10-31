@@ -5,7 +5,7 @@ import { requestResult } from "./idb";
 import { DEFAULT_V2_PREFERENCES, METADATA_KEY, type MetadataRecord } from "./metadata";
 
 export const DATABASE_NAME = "giftlist";
-export const DATABASE_VERSION = 5;
+export const DATABASE_VERSION = 6;
 
 export const STORE_NAMES = {
   people: "people",
@@ -49,7 +49,7 @@ async function migrateToVersion2(database: IDBDatabase, transaction: IDBTransact
 
   const peopleStore = transaction.objectStore(STORE_NAMES.people);
   const people = await requestResult(
-    peopleStore.getAll() as IDBRequest<Omit<Person, "sortOrder" | "photo">[]>,
+    peopleStore.getAll() as IDBRequest<Omit<Person, "sortOrder" | "photo" | "note">[]>,
   );
   people
     .sort(comparePeopleByName)
@@ -131,6 +131,23 @@ async function migrateToVersion5(transaction: IDBTransaction): Promise<void> {
   if (metadata !== undefined) metadataStore.put({ ...metadata, schemaVersion: 5 });
 }
 
+/** Version 6: `Person.note` ("" for existing people) and `Gift.price` (null for existing gifts). */
+async function migrateToVersion6(transaction: IDBTransaction): Promise<void> {
+  const peopleStore = transaction.objectStore(STORE_NAMES.people);
+  const people = await requestResult(peopleStore.getAll() as IDBRequest<Omit<Person, "note">[]>);
+  people.forEach((person) => peopleStore.put({ ...person, note: "" }));
+
+  const giftsStore = transaction.objectStore(STORE_NAMES.gifts);
+  const gifts = await requestResult(giftsStore.getAll() as IDBRequest<Omit<Gift, "price">[]>);
+  gifts.forEach((gift) => giftsStore.put({ ...gift, price: null }));
+
+  const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+  const metadata = await requestResult(
+    metadataStore.get(METADATA_KEY) as IDBRequest<MetadataRecord | undefined>,
+  );
+  if (metadata !== undefined) metadataStore.put({ ...metadata, schemaVersion: 6 });
+}
+
 export function openGiftListDatabase(name = DATABASE_NAME): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(name, DATABASE_VERSION);
@@ -146,6 +163,7 @@ export function openGiftListDatabase(name = DATABASE_NAME): Promise<IDBDatabase>
         if (event.oldVersion < 3) await migrateToVersion3(upgradeTransaction);
         if (event.oldVersion < 4) await migrateToVersion4(upgradeTransaction);
         if (event.oldVersion < 5) await migrateToVersion5(upgradeTransaction);
+        if (event.oldVersion < 6) await migrateToVersion6(upgradeTransaction);
       };
       runMigrations().catch(() => {
         try {

@@ -53,6 +53,18 @@ export function formatReminderSummary(items: { name: string; daysUntil: number }
   return items.map((item) => `${item.name}: narozeniny ${formatRelativeDays(item.daysUntil)}`).join(" · ");
 }
 
+const PRICE_FORMAT = new Intl.NumberFormat("cs-CZ", {
+  style: "currency",
+  currency: "CZK",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+/** "1 200 Kč", "349,90 Kč" */
+export function formatPrice(price: number): string {
+  return PRICE_FORMAT.format(price);
+}
+
 /** "14. května 1990", or "14. května" when the year is unknown. Empty string for invalid input. */
 export function formatBirthdayCs(birthday: string): string {
   const parts = parseBirthday(birthday);

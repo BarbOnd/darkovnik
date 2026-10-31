@@ -16,6 +16,7 @@ type GiftDetailsFieldsProps = {
   open: boolean;
   onOpenChange(open: boolean): void;
   invalidLinkRowKey?: string;
+  invalidPrice?: boolean;
 };
 
 /** Collapsible "Další podrobnosti": buyer, priority, tags, links, note, status (UI.md → Gift form). */
@@ -27,6 +28,7 @@ export function GiftDetailsFields({
   open,
   onOpenChange,
   invalidLinkRowKey,
+  invalidPrice = false,
 }: GiftDetailsFieldsProps) {
   const id = useId();
 
@@ -77,6 +79,23 @@ export function GiftDetailsFields({
             ))}
           </div>
         </fieldset>
+
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-price`}>
+            Cena (Kč)
+          </label>
+          <input
+            id={`${id}-price`}
+            className="price-input"
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="nepovinné"
+            maxLength={16}
+            value={value.price}
+            aria-invalid={invalidPrice}
+            onChange={(event) => set("price", event.target.value)}
+          />
+        </div>
 
         <fieldset className="field">
           <legend className="field__label">Štítky</legend>

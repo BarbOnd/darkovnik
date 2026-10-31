@@ -15,6 +15,7 @@ Person
 - photo: string | null          // cropped square 256×256 JPEG "data:image/jpeg;base64,…" URL, or null
 - photoSource: string | null    // downscaled original JPEG data URL (shorter side ≤ 1024 px) for re-editing
 - photoCrop: { zoom, dx, dy } | null  // crop position in photoSource, viewport units (zoom 1–4)
+- note: string                  // free-form note, trimmed; "" when empty
 - sortOrder: number             // manual order among people
 - createdAt: string             // ISO-8601
 - updatedAt: string             // ISO-8601
@@ -37,6 +38,7 @@ Gift
 - priority: "LOW" | "MEDIUM" | "HIGH"   // default MEDIUM
 - status: "NEW" | "BOUGHT" | "GIVEN"    // default NEW
 - buyerPersonId: number | null
+- price: number | null          // CZK, 0 ≤ price ≤ 100 000 000, at most two decimals; null = unknown
 - sortOrder: number             // manual order within the recipient's gift list
 - createdAt: string
 - updatedAt: string
@@ -140,7 +142,7 @@ The `metadata` store holds one application record:
 
 ```text
 - key: "app"                   // the single record's key
-- schemaVersion: number        // IndexedDB schema version (currently 5); NOT the backup file version
+- schemaVersion: number        // IndexedDB schema version (currently 6); NOT the backup file version
 - initializationComplete: boolean   // set when the default tags were created on first start
 - highestPersonId: number
 - highestGiftId: number
@@ -249,7 +251,7 @@ The backup file has its own format version `schemaVersion: 1`, independent of th
 }
 ```
 
-Exported Person and Gift records include `sortOrder`. Person records include `photo`, `photoSource`, and `photoCrop` (or nulls), so photos and their crop move to a new phone with the backup.
+Exported Person and Gift records include `sortOrder`. Person records include `photo`, `photoSource`, and `photoCrop` (or nulls), so photos and their crop move to a new phone with the backup, and `note`. Gift records include `price`. The backup format version stays 1: `note` and `price` are optional on import (missing `note` → "", missing `price` → null), so backups made before these fields still import.
 
 File name: `giftlist-zaloha-YYYY-MM-DD.json` (local date). The copy sent through the system share sheet has the same content and the `.txt` extension (browsers do not share `.json` files); import validates the content, not the extension.
 
@@ -272,6 +274,7 @@ Validate the complete import document **and** the resulting merged dataset befor
 - birthday format (`YYYY-MM-DD` valid date, or `--MM-DD` valid month/day incl. `--02-29`);
 - photo fields: all null, or all set — `photo` a base64 `data:image/jpeg|png|webp` URL of at most 300 000 characters, `photoSource` the same of at most 1 500 000 characters, `photoCrop` with `zoom` 1–4 and finite `dx`, `dy`;
 - HTTP/HTTPS URLs;
+- `note` a string when present; `price` null or a finite number 0–100 000 000 with at most two decimals when present;
 - referential integrity;
 - tag-name uniqueness.
 
@@ -295,7 +298,7 @@ Treat a 29 February birthday as 28 February in a non-leap year.
 
 ## Schema migrations
 
-The current IndexedDB version is **5**.
+The current IndexedDB version is **6**.
 
 The migration from version 1 to 2 (version 1 had no `sortOrder`, metadata preferences, or `notificationLog`):
 - backfills `Person.sortOrder` by name (cs-CZ);
@@ -309,3 +312,5 @@ The migration from version 2 to 3 adds `photo: null` to every existing person an
 The migration from version 3 to 4 sets `photoSource` and `photoCrop`: an existing photo becomes its own source with the initial crop (`zoom 1`, centered); people without a photo get nulls.
 
 The migration from version 4 to 5 adds `seenAt` to every NotificationLog entry, set to its `shownAt` (reminders shown before the upgrade count as seen, so the upgrade does not revive old reminders).
+
+The migration from version 5 to 6 adds `note: ""` to every person and `price: null` to every gift; everything else is kept.

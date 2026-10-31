@@ -92,6 +92,7 @@ describe("IndexedDB migration v1 → current", () => {
         photo: null,
         photoSource: null,
         photoCrop: null,
+        note: "",
         sortOrder: person.sortOrder,
       });
     });
@@ -101,7 +102,7 @@ describe("IndexedDB migration v1 → current", () => {
     expect(giftsOfZuzana.map((g) => g.sortOrder).sort()).toEqual([0, 1, 2, 3]);
     const giftsOfAdam = await repository.listGiftsByPerson(4);
     expect([...giftsOfAdam].sort((a, b) => a.sortOrder - b.sortOrder).map((g) => g.id)).toEqual([7, 6]);
-    expect(await repository.getGift(3)).toMatchObject({ buyerPersonId: 2, priority: "HIGH", status: "NEW" });
+    expect(await repository.getGift(3)).toMatchObject({ buyerPersonId: 2, priority: "HIGH", status: "NEW", price: null });
 
     expect(await repository.listGiftLinks(3)).toEqual([
       { id: 3, giftId: 3, url: "https://example.test/a", sortOrder: 0 },
@@ -110,7 +111,7 @@ describe("IndexedDB migration v1 → current", () => {
     expect((await repository.listTags()).map((tag) => tag.name)).toEqual(["Narozeniny"]);
 
     expect(await repository.getMetadata()).toEqual({
-      schemaVersion: 5,
+      schemaVersion: 6,
       highestPersonId: 6,
       highestGiftId: 9,
       highestTagId: 3,
@@ -124,7 +125,7 @@ describe("IndexedDB migration v1 → current", () => {
     });
 
     const database = await openGiftListDatabase(DATABASE_NAME);
-    expect(database.version).toBe(5);
+    expect(database.version).toBe(6);
     const transaction = database.transaction(STORE_NAMES.notificationLog, "readonly");
     expect([...transaction.objectStore(STORE_NAMES.notificationLog).indexNames]).toEqual(["personId"]);
     database.close();
@@ -167,10 +168,11 @@ const v2Metadata = {
  * current code.
  */
 function createVersion2Or3Database(
-  version: 2 | 3 | 4,
+  version: 2 | 3 | 4 | 5,
   peopleRecords: object[] = v2People,
   metadataRecord: object = v2Metadata,
   logRecords: object[] = [],
+  giftRecords: object[] = [],
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, version);
@@ -192,6 +194,7 @@ function createVersion2Or3Database(
       notificationLog.createIndex("personId", "personId");
 
       peopleRecords.forEach((person) => people.put(person));
+      giftRecords.forEach((gift) => gifts.put(gift));
       logRecords.forEach((entry) => notificationLog.put(entry));
       metadata.put(metadataRecord);
     };
@@ -212,11 +215,11 @@ describe("IndexedDB migration v2 → current", () => {
 
     const people = await repository.listPeople();
     expect(people).toEqual(
-      v2People.map((person) => ({ ...person, photo: null, photoSource: null, photoCrop: null })),
+      v2People.map((person) => ({ ...person, photo: null, photoSource: null, photoCrop: null, note: "" })),
     );
 
     // toEqual ignores the undefined `key`, which getMetadata() does not return.
-    expect(await repository.getMetadata()).toEqual({ ...v2Metadata, key: undefined, schemaVersion: 5 });
+    expect(await repository.getMetadata()).toEqual({ ...v2Metadata, key: undefined, schemaVersion: 6 });
   });
 });
 
@@ -236,13 +239,15 @@ describe("IndexedDB migration v3 → v4", () => {
       ...v3People[0],
       photoSource: photo,
       photoCrop: { zoom: 1, dx: 0, dy: 0 },
+      note: "",
     });
     expect(await repository.getPerson(v3People[1].id)).toEqual({
       ...v3People[1],
       photoSource: null,
       photoCrop: null,
+      note: "",
     });
-    expect((await repository.getMetadata()).schemaVersion).toBe(5);
+    expect((await repository.getMetadata()).schemaVersion).toBe(6);
   });
 });
 
@@ -264,11 +269,52 @@ describe("IndexedDB migration v4 → v5", () => {
     // An old reminder must not reappear in the "Zmeškané připomínky" card after the upgrade.
     expect(await repository.listUnseenReminders()).toEqual([]);
     expect(await repository.listNotificationLogKeys()).toEqual([shown.key]);
-    expect(await repository.listPeople()).toEqual(v4People);
-    expect(await repository.getMetadata()).toEqual({ ...v2Metadata, key: undefined, schemaVersion: 5 });
+    expect(await repository.listPeople()).toEqual(v4People.map((person) => ({ ...person, note: "" })));
+    expect(await repository.getMetadata()).toEqual({ ...v2Metadata, key: undefined, schemaVersion: 6 });
 
     const database = await openGiftListDatabase(DATABASE_NAME);
-    expect(database.version).toBe(5);
+    expect(database.version).toBe(6);
     database.close();
+  });
+});
+
+describe("IndexedDB migration v5 → v6", () => {
+  it("adds an empty note to people and a null price to gifts, keeps everything else", async () => {
+    const v5People = v2People.map((person) => ({ ...person, photo: null, photoSource: null, photoCrop: null }));
+    const v5Gift = {
+      id: 7,
+      personId: 1,
+      name: "Kniha",
+      note: "vázaná",
+      priority: "HIGH",
+      status: "BOUGHT",
+      buyerPersonId: 3,
+      sortOrder: 0,
+      createdAt: "2026-01-03T00:00:00.000Z",
+      updatedAt: "2026-01-04T00:00:00.000Z",
+    };
+    const seen = {
+      key: "1:DAY:2026-05-14",
+      personId: 1,
+      type: "DAY",
+      occurrenceDate: "2026-05-14",
+      shownAt: "2026-05-14T08:00:00.000Z",
+      seenAt: null,
+    };
+    await createVersion2Or3Database(5, v5People, { ...v2Metadata, schemaVersion: 5, highestGiftId: 7 }, [seen], [v5Gift]);
+
+    repository = createGiftListRepository({ databaseName: DATABASE_NAME });
+    await repository.initialize();
+
+    expect(await repository.listPeople()).toEqual(v5People.map((person) => ({ ...person, note: "" })));
+    expect(await repository.getGift(7)).toEqual({ ...v5Gift, price: null });
+    // Unseen reminders stay unseen across this upgrade.
+    expect(await repository.listUnseenReminders()).toEqual([seen]);
+    expect(await repository.getMetadata()).toEqual({
+      ...v2Metadata,
+      key: undefined,
+      schemaVersion: 6,
+      highestGiftId: 7,
+    });
   });
 });

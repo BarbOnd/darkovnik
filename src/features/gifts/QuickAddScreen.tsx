@@ -20,7 +20,7 @@ const NAME_MAX_LENGTH = 200;
 const PERSON_NAME_MAX_LENGTH = 100;
 
 type QuickAddError = {
-  field: "recipients" | "name" | "person" | "links" | "save";
+  field: "recipients" | "name" | "person" | "links" | "price" | "save";
   message: string;
   linkRowKey?: string;
 };
@@ -128,7 +128,11 @@ function QuickAddForm({ initialPeople, initialGifts, tags, preselectedId, shared
       const prepared = prepareGiftDetails(details);
       if (!prepared.ok) {
         setDetailsOpen(true);
-        setError({ field: "links", message: prepared.error, linkRowKey: prepared.linkRowKey });
+        setError(
+          prepared.field === "links"
+            ? { field: "links", message: prepared.error, linkRowKey: prepared.linkRowKey }
+            : { field: "price", message: prepared.error },
+        );
         return;
       }
       const created = await repository.createGiftsWithLinks({
@@ -271,6 +275,7 @@ function QuickAddForm({ initialPeople, initialGifts, tags, preselectedId, shared
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         invalidLinkRowKey={error?.field === "links" ? error.linkRowKey : undefined}
+        invalidPrice={error?.field === "price"}
       />
 
       {error !== null && (

@@ -23,6 +23,7 @@ import {
   type ImportPlan,
   type Result,
 } from "../domain/backup";
+import { isValidPrice } from "../domain/gifts";
 import { photoFieldsError, type PersonPhotoFields } from "../domain/photo";
 import { compareBySortOrder } from "../domain/sorting";
 import {
@@ -50,18 +51,22 @@ const NOTIFICATION_LOG_RETENTION_MS = 366 * 24 * 60 * 60 * 1000;
 
 type CounterName = "people" | "gifts" | "tags" | "giftLinks";
 
-/** Photo fields are optional (no photo); when given, all three must be given together. */
-export type CreatePersonInput = Pick<Person, "name" | "birthday" | "avatarSeed"> & PersonPhotoFields;
+/** Photo fields are optional (no photo); when given, all three must be given together. `note` defaults to "". */
+export type CreatePersonInput = Pick<Person, "name" | "birthday" | "avatarSeed"> &
+  Partial<Pick<Person, "note">> &
+  PersonPhotoFields;
 /**
  * Omitted fields stay unchanged. Photo fields change together: all three set,
  * or all three null to remove the photo.
  */
-export type UpdatePersonInput = Partial<Pick<Person, "name" | "birthday" | "avatarSeed">> &
+export type UpdatePersonInput = Partial<Pick<Person, "name" | "birthday" | "avatarSeed" | "note">> &
   PersonPhotoFields;
+/** `price` defaults to null (unknown). */
 export type CreateGiftInput = Pick<
   Gift,
   "personId" | "name" | "note" | "priority" | "status" | "buyerPersonId"
->;
+> &
+  Partial<Pick<Gift, "price">>;
 export type UpdateGiftInput = Partial<CreateGiftInput>;
 /** A link as edited in the gift form; without `id` it is a new link. Array order = link order. */
 export type GiftLinkDraft = { id?: number; url: string; title?: string };
@@ -215,6 +220,10 @@ function assertBirthday(birthday: string | null): void {
   }
 }
 
+function assertNote(note: string | undefined): void {
+  if (note !== undefined && typeof note !== "string") throw new Error("Poznámka musí být text.");
+}
+
 function assertPhotoFields(fields: PersonPhotoFields): void {
   const error = photoFieldsError(fields);
   if (error !== null) throw new Error(error);
@@ -228,6 +237,9 @@ function assertGiftFields(input: UpdateGiftInput): void {
   if (input.name !== undefined) assertNonEmpty(input.name, "Název dárku");
   if (input.note !== undefined && typeof input.note !== "string") {
     throw new Error("Poznámka musí být text.");
+  }
+  if (input.price !== undefined && !isValidPrice(input.price)) {
+    throw new Error("Cena musí být nezáporné číslo.");
   }
   if (input.priority !== undefined && !isOneOf(GIFT_PRIORITIES, input.priority)) {
     throw new Error("Neplatná priorita dárku.");
@@ -456,6 +468,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       priority: input.priority,
       status: input.status,
       buyerPersonId: input.buyerPersonId,
+      price: input.price ?? null,
       sortOrder: 0,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -478,6 +491,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       priority: input.priority ?? gift.priority,
       status: input.status ?? gift.status,
       buyerPersonId: input.buyerPersonId !== undefined ? input.buyerPersonId : gift.buyerPersonId,
+      price: input.price !== undefined ? input.price : gift.price,
       updatedAt: now().toISOString(),
     };
     if (updated.buyerPersonId !== null && updated.buyerPersonId !== gift.buyerPersonId) {
@@ -683,6 +697,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       assertBirthday(input.birthday);
       assertNonEmpty(input.avatarSeed, "Avatar seed");
       assertPhotoFields(input);
+      assertNote(input.note);
       const db = await connection();
       const transaction = db.transaction([STORE_NAMES.people, STORE_NAMES.metadata], "readwrite");
       const done = transactionDone(transaction);
@@ -699,6 +714,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
         photo: input.photo ?? null,
         photoSource: input.photoSource ?? null,
         photoCrop: input.photoCrop ?? null,
+        note: input.note?.trim() ?? "",
         sortOrder: 0,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -716,6 +732,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       if (input.birthday !== undefined) assertBirthday(input.birthday);
       if (input.avatarSeed !== undefined) assertNonEmpty(input.avatarSeed, "Avatar seed");
       assertPhotoFields(input);
+      assertNote(input.note);
       const db = await connection();
       const transaction = db.transaction(STORE_NAMES.people, "readwrite");
       const done = transactionDone(transaction);
@@ -726,6 +743,7 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
         name: input.name?.trim() ?? person.name,
         birthday: input.birthday !== undefined ? input.birthday : person.birthday,
         avatarSeed: input.avatarSeed ?? person.avatarSeed,
+        note: input.note !== undefined ? input.note.trim() : person.note,
         // Validated above: the three photo fields are either all given or all omitted.
         ...(input.photo !== undefined && {
           photo: input.photo,

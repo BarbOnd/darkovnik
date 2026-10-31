@@ -173,6 +173,7 @@ export function PersonDetailScreen({ personId }: { personId: number }) {
               {nextBirthdaySuffix(person.birthday)}
             </p>
           )}
+          {person.note !== "" && <p className="person-detail__note">{person.note}</p>}
         </section>
       )}
       {person !== undefined && <GiftList person={person} />}

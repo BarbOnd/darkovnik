@@ -5,6 +5,7 @@ import { Dialog } from "../../components/Dialog";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import type { Gift, Person, Tag } from "../../domain/entities";
+import { priceToInput } from "../../domain/gifts";
 import { comparePeopleByName, compareTagsByName } from "../../domain/sorting";
 import { useLoad } from "../../lib/useLoad";
 import { GiftDetailsFields } from "./GiftDetailsFields";
@@ -32,7 +33,7 @@ type GiftFormProps = {
   onDelete?(): void;
 };
 
-type FormError = { field: "name" | "links" | "save"; message: string; rowKey?: string };
+type FormError = { field: "name" | "links" | "price" | "save"; message: string; rowKey?: string };
 
 function GiftForm({ people, tags, initial, submitLabel, cancelFallback, onSubmit, onDelete }: GiftFormProps) {
   const id = useId();
@@ -51,7 +52,11 @@ function GiftForm({ people, tags, initial, submitLabel, cancelFallback, onSubmit
     const details = prepareGiftDetails(values.details);
     if (!details.ok) {
       setDetailsOpen(true);
-      setError({ field: "links", message: details.error, rowKey: details.linkRowKey });
+      setError(
+        details.field === "links"
+          ? { field: "links", message: details.error, rowKey: details.linkRowKey }
+          : { field: "price", message: details.error },
+      );
       return;
     }
     setError(null);
@@ -109,6 +114,7 @@ function GiftForm({ people, tags, initial, submitLabel, cancelFallback, onSubmit
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         invalidLinkRowKey={error?.field === "links" ? error.rowKey : undefined}
+        invalidPrice={error?.field === "price"}
       />
 
       {error !== null && (
@@ -213,6 +219,7 @@ export function EditGiftScreen({ giftId }: { giftId: number }) {
             details: {
               buyerPersonId: data.gift.buyerPersonId,
               priority: data.gift.priority,
+              price: priceToInput(data.gift.price),
               tagIds: data.tagIds,
               links: linkRowsFrom(data.links),
               note: data.gift.note,

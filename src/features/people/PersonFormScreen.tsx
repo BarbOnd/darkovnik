@@ -17,8 +17,9 @@ import { PhotoCropDialog, type PhotoCropSource } from "./PhotoCropDialog";
 import { birthdayToFields, fieldsToBirthday } from "./birthdayFields";
 
 const NAME_MAX_LENGTH = 100;
+const NOTE_MAX_LENGTH = 2000;
 
-type PersonFormValues = Pick<Person, "name" | "birthday" | "avatarSeed"> & {
+type PersonFormValues = Pick<Person, "name" | "birthday" | "avatarSeed" | "note"> & {
   photo: PersonPhoto | null;
 };
 
@@ -31,8 +32,10 @@ type PersonFormProps = {
 
 function PersonForm({ initial, submitLabel, cancelFallback, onSubmit }: PersonFormProps) {
   const nameId = useId();
+  const noteId = useId();
   const errorId = useId();
   const [name, setName] = useState(initial.name);
+  const [note, setNote] = useState(initial.note);
   const [birthday, setBirthday] = useState(() => birthdayToFields(initial.birthday));
   const [avatarSeed, setAvatarSeed] = useState(initial.avatarSeed);
   const [photo, setPhoto] = useState(initial.photo);
@@ -93,7 +96,7 @@ function PersonForm({ initial, submitLabel, cancelFallback, onSubmit }: PersonFo
     setError(null);
     setSaving(true);
     try {
-      await onSubmit({ name: name.trim(), birthday: birthdayResult.value, avatarSeed, photo });
+      await onSubmit({ name: name.trim(), birthday: birthdayResult.value, avatarSeed, photo, note: note.trim() });
     } catch {
       setError({ field: "save", message: "Osobu se nepodařilo uložit. Zkuste to prosím znovu." });
       setSaving(false);
@@ -177,6 +180,20 @@ function PersonForm({ initial, submitLabel, cancelFallback, onSubmit }: PersonFo
 
       <BirthdayInput value={birthday} onChange={setBirthday} invalid={error?.field === "birthday"} />
 
+      <div className="field">
+        <label className="field__label" htmlFor={noteId}>
+          Poznámka (nepovinné)
+        </label>
+        <textarea
+          id={noteId}
+          rows={3}
+          maxLength={NOTE_MAX_LENGTH}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+        />
+        <p className="field__hint">Třeba velikosti, oblíbené barvy nebo co už má.</p>
+      </div>
+
       {error !== null && (
         <p id={errorId} className="form__error" role="alert">
           {error.message}
@@ -238,6 +255,7 @@ export function NewPersonScreen() {
     birthday: null,
     avatarSeed: createAvatarSeed(),
     photo: null,
+    note: "",
   }));
 
   return (

@@ -41,6 +41,8 @@ Zmeškané připomínky                    [Zavřít]
 [ avatar ] Petr
            narozeniny před 2 dny
 
+( Hledat dárek…                        )
+
 Nadcházející narozeniny
 ────────────────
 [ avatar ] Jana                          🎂
@@ -62,6 +64,7 @@ Lidé                     [Abecedně ▾]
 - The sort switch offers "Abecedně" / "Vlastní pořadí"; in "Vlastní pořadí" an "Upravit pořadí" action appears next to "Přidat osobu" below the list.
 - "Nadcházející narozeniny" shows one quiet line when nobody has a birthday in the next 30 days.
 - The floating `+` (bottom right, above the navigation) opens quick add.
+- The search field (shown once there is at least one gift) searches all gifts by name and note; while it has text, "Výsledky hledání" replaces the birthdays and the people list (PRODUCT.md §10). Rows: recipient avatar, gift name, "Pro: Jana", status unless Nápad; tapping opens the gift.
 - Do not overload the screen with statistics.
 
 ## Person detail
@@ -71,6 +74,7 @@ Lidé                     [Abecedně ▾]
 
 [avatar nebo fotka]
 🎂 14. května 1990 · za 12 dní · 36 let
+Velikost M, má ráda modrou              (poznámka, jen když je vyplněná)
 
 Dárky                [Podle priority ▾]
 
@@ -79,12 +83,13 @@ Dárky                [Podle priority ▾]
 Zrušit filtry
 
 Kniha                               ↗
-★★★  Koupí: Petr  [Narozeniny]
+★★★  450 Kč  Koupí: Petr  [Narozeniny]
 vázané vydání, ne brožura
 
 Sluchátka                          ✓
-★★☆
+★★☆  1 990 Kč
 
+Celkem 2 440 Kč                     (only when a visible gift has a price)
 [Upravit pořadí]            (only in Vlastní pořadí)
                                     ( + )
 ```
@@ -109,7 +114,7 @@ Sluchátka                          ✓
 
 ## Person editing
 
-Fields: Fotka/Avatar, Jméno, Narozeniny (den, měsíc, rok — rok volitelný).
+Fields: Fotka/Avatar, Jméno, Narozeniny (den, měsíc, rok — rok volitelný), Poznámka (nepovinné; hint "Třeba velikosti, oblíbené barvy nebo co už má."). The note is shown in the person detail under the birthday, line breaks kept.
 
 ### Birthday input
 Three compact fields or selects: Den, Měsíc (Czech month names), Rok (optional). Leaving the year empty means "year unknown". Validate the day against the month (incl. 29 Feb when the year is empty or a leap year).
@@ -126,7 +131,7 @@ Order:
 1. Příjemce (single select, can be changed; the gift form is used for editing — new gifts come from quick add);
 2. Název dárku.
 
-Then: Kdo koupí, Priorita, Štítky, Odkazy, Poznámka, Stav.
+Then: Kdo koupí, Priorita, Cena (Kč), Štítky, Odkazy, Poznámka, Stav. "Cena (Kč)" is a short numeric field (placeholder "nepovinné"); an unreadable value is reported under the form and the field is marked invalid.
 
 Do not make the form feel administrative: optional fields are collapsed under "Další podrobnosti" (open when editing). Links: URL + optional title, buttons Otevřít / Posunout nahoru / Posunout dolů / Odebrat. Status labels: Nápad / Koupeno / Předáno. "Smazat dárek" is at the bottom of the edit form, separated from Uložit, and asks for confirmation.
 

@@ -9,6 +9,7 @@ import {
   type Person,
   type Tag,
 } from "./entities";
+import { isValidPrice } from "./gifts";
 import { isHttpUrl } from "./links";
 import { photoFieldsError, type CropView } from "./photo";
 import { compareBySortOrder } from "./sorting";
@@ -143,12 +144,16 @@ function readPerson(record: Fields, where: string): Person {
     photoCrop: (record.photoCrop ?? null) as CropView | null,
   };
   if (photoFieldsError(photoFields) !== null) invalid(`${where} má neplatnou fotku`);
+  // Older backups (before the person note) have no `note`.
+  const note = record.note ?? "";
+  if (typeof note !== "string") invalid(`${where} má neplatnou poznámku`);
   return {
     id: id(record, "id", where),
     name: text(record, "name", where, { nonEmpty: true }).trim(),
     birthday,
     avatarSeed: text(record, "avatarSeed", where, { nonEmpty: true }),
     ...photoFields,
+    note: note.trim(),
     sortOrder: integer(record, "sortOrder", where),
     createdAt: timestamp(record, "createdAt", where),
     updatedAt: timestamp(record, "updatedAt", where),
@@ -160,6 +165,9 @@ function readGift(record: Fields, where: string): Gift {
   if (!isOneOf(GIFT_PRIORITIES, priority)) invalid(`${where} má neplatnou prioritu`);
   if (!isOneOf(GIFT_STATUSES, status)) invalid(`${where} má neplatný stav`);
   const buyer = record.buyerPersonId ?? null;
+  // Older backups (before the gift price) have no `price`.
+  const price = record.price ?? null;
+  if (!isValidPrice(price)) invalid(`${where} má neplatnou cenu`);
   return {
     id: id(record, "id", where),
     personId: id(record, "personId", where),
@@ -168,6 +176,7 @@ function readGift(record: Fields, where: string): Gift {
     priority,
     status,
     buyerPersonId: buyer === null ? null : id(record, "buyerPersonId", where),
+    price,
     sortOrder: integer(record, "sortOrder", where),
     createdAt: timestamp(record, "createdAt", where),
     updatedAt: timestamp(record, "updatedAt", where),

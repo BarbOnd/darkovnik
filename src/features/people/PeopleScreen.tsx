@@ -8,13 +8,55 @@ import { ReorderList } from "../../components/ReorderList";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import { PlusIcon } from "../../components/icons";
-import { isOneOf, PEOPLE_SORT_MODES, type Person } from "../../domain/entities";
-import { countActiveGiftsByPerson } from "../../domain/gifts";
+import { isOneOf, PEOPLE_SORT_MODES, type Gift, type Person } from "../../domain/entities";
+import { countActiveGiftsByPerson, searchGifts } from "../../domain/gifts";
 import { sortPeople } from "../../domain/sorting";
 import { formatCount, GIFT_FORMS } from "../../lib/plural";
 import { useLoad } from "../../lib/useLoad";
+import { STATUS_LABELS } from "../gifts/labels";
 import { MissedRemindersCard } from "../notifications/MissedRemindersCard";
 import { UpcomingBirthdays } from "./UpcomingBirthdays";
+
+/** Gifts of all people matching the search query; tapping opens the gift (PRODUCT.md §10). */
+function SearchResults({ gifts, people, query }: { gifts: Gift[]; people: Person[]; query: string }) {
+  const peopleById = new Map(people.map((person) => [person.id, person]));
+  const results = searchGifts(gifts, query);
+
+  return (
+    <section className="section" aria-labelledby="search-heading">
+      <h2 id="search-heading" className="section__title">
+        Výsledky hledání
+      </h2>
+      {results.length === 0 ? (
+        <p className="muted" role="status">
+          Žádný dárek neodpovídá hledání „{query.trim()}“.
+        </p>
+      ) : (
+        <ul className="gift-list">
+          {results.map((gift) => {
+            const recipient = peopleById.get(gift.personId);
+            return (
+              <li key={gift.id}>
+                <Link className="gift-row" href={paths.giftEdit(gift.id)}>
+                  {recipient !== undefined && (
+                    <PersonAvatar seed={recipient.avatarSeed} name={recipient.name} photo={recipient.photo} size={36} />
+                  )}
+                  <span className="gift-row__text">
+                    <span className="gift-row__name">{gift.name}</span>
+                    <span className="gift-row__meta">
+                      {recipient !== undefined && <span>Pro: {recipient.name}</span>}
+                      {gift.status !== "NEW" && <span>{STATUS_LABELS[gift.status]}</span>}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 function PersonSummary({ person, activeGifts }: { person: Person; activeGifts: number }) {
   return (
@@ -31,12 +73,15 @@ function PersonSummary({ person, activeGifts }: { person: Person; activeGifts: n
 export function PeopleScreen() {
   const { repository, metadata, updatePreferences } = useApp();
   const sortSelectId = useId();
+  const searchId = useId();
   const [sortError, setSortError] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [query, setQuery] = useState("");
+  const searching = query.trim() !== "";
 
   const load = useCallback(async () => {
     const [people, gifts] = await Promise.all([repository.listPeople(), repository.listGifts()]);
-    return { people, activeGiftCounts: countActiveGiftsByPerson(gifts) };
+    return { people, gifts, activeGiftCounts: countActiveGiftsByPerson(gifts) };
   }, [repository]);
   const overview = useLoad(load);
   const manual = metadata.peopleSortMode === "MANUAL";
@@ -46,10 +91,30 @@ export function PeopleScreen() {
       <ScreenHeader title="GiftList" />
 
       <MissedRemindersCard />
-      {overview.status === "ready" && overview.data.people.length > 0 && !reordering && (
+      {overview.status === "ready" && overview.data.gifts.length > 0 && !reordering && (
+        <div className="search">
+          <label className="visually-hidden" htmlFor={searchId}>
+            Hledat dárek
+          </label>
+          <input
+            id={searchId}
+            type="search"
+            className="search__input"
+            placeholder="Hledat dárek…"
+            autoComplete="off"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+      )}
+      {overview.status === "ready" && searching && (
+        <SearchResults gifts={overview.data.gifts} people={overview.data.people} query={query} />
+      )}
+      {overview.status === "ready" && overview.data.people.length > 0 && !reordering && !searching && (
         <UpcomingBirthdays people={overview.data.people} activeGiftCounts={overview.data.activeGiftCounts} />
       )}
 
+      {!searching && (
       <section className="section" aria-labelledby="people-heading">
         <div className="section__header">
           <h2 id="people-heading">Lidé</h2>
@@ -143,6 +208,7 @@ export function PeopleScreen() {
           </>
         )}
       </section>
+      )}
       {!reordering && <QuickAddButton />}
     </>
   );

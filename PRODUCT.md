@@ -12,6 +12,7 @@
 | avatarSeed | yes | Persistent seed for DiceBear Initial Face |
 | photo | no | Optional photo (cropped square JPEG, stored locally); shown instead of the avatar |
 | photoSource, photoCrop | no | Downscaled original and crop position, so the crop can be edited again (set together with `photo`) |
+| note | no | Free-form note about the person (sizes, favourite colours, what they already have); shown in the person detail |
 | sortOrder | yes | Position in the manual people order |
 | createdAt | yes | Creation timestamp |
 | updatedAt | yes | Last modification timestamp |
@@ -26,7 +27,7 @@ The birthday is optional. The user enters day and month, and optionally the year
 ### Person actions
 
 - Add ("Přidat osobu" on the People screen, or "+ Nová osoba" in quick add)
-- Edit in the person form: name, birthday, avatar ("Změnit avatara"), photo (upload, re-crop, replace, remove)
+- Edit in the person form: name, birthday, note, avatar ("Změnit avatara"), photo (upload, re-crop, replace, remove)
 - Delete
 - Open person's gift list
 - Reorder (in manual sort mode)
@@ -51,6 +52,7 @@ Deleting a person requires confirmation. If the person is a buyer on other peopl
 | priority | yes | LOW, MEDIUM, HIGH; default MEDIUM |
 | status | yes | NEW, BOUGHT, GIVEN; default NEW |
 | buyerPersonId | no | Person who is expected to buy the gift |
+| price | no | Expected price in Kč (up to two decimals); shown in the gift row, summed per list |
 | tagIds | no | Assigned tags, persisted as GiftTag associations |
 | sortOrder | yes | Position in the recipient's manual gift order |
 | createdAt | yes | Creation timestamp |
@@ -87,6 +89,10 @@ The user can add, edit, reorder (up/down), and remove links. Links open external
 ## 5. Priority
 
 LOW, MEDIUM, HIGH. Default MEDIUM. The UI may use stars (1–3).
+
+### Price
+
+"Cena (Kč)" is optional. The input accepts "1200", "1 200", "349,90" or "349.9"; anything else is refused with a Czech message. The gift row shows the price ("1 200 Kč"). Under the gift list, when at least one visible gift has a price, a line sums the **visible** (filtered) gifts: "Celkem 3 450 Kč · 2 dárky bez ceny". Filtering by a tag such as Vánoce therefore shows the budget for that occasion.
 
 ## 6. Buyers
 
@@ -155,9 +161,13 @@ Bottom navigation: **Lidé | Nastavení**. There is no separate Gifts tab.
 
 The People screen shows, in order:
 1. **Zmeškané připomínky** card (only when there are any, see §12);
-2. **Nadcházející narozeniny**;
-3. **Lidé** list with sort switch;
-4. prominent `+` quick-add button.
+2. search field "Hledat dárek…" (only when there is at least one gift);
+3. **Nadcházející narozeniny**;
+4. **Lidé** list with sort switch;
+5. prominent `+` quick-add button.
+
+### Search
+Typing into "Hledat dárek…" replaces the birthdays and the people list with **Výsledky hledání**: gifts of all people whose name or note contains the text (case-insensitive), name matches first. Each row shows the gift name, "Pro: Jana" and the status unless it is Nápad; tapping opens the gift's edit form. Clearing the field restores the normal screen. The query is not remembered.
 
 ### Upcoming birthdays
 - Birthdays from **today to today + 30 days** (inclusive), so a person who just got the 30-day reminder is in the list.
