@@ -253,7 +253,7 @@ The backup file has its own format version `schemaVersion: 1`, independent of th
 
 Exported Person and Gift records include `sortOrder`. Person records include `photo`, `photoSource`, and `photoCrop` (or nulls), so photos and their crop move to a new phone with the backup, and `note`. Gift records include `price`. The backup format version stays 1: `note` and `price` are optional on import (missing `note` → "", missing `price` → null), so backups made before these fields still import.
 
-File name: `giftlist-zaloha-YYYY-MM-DD.json` (local date). The copy sent through the system share sheet has the same content and the `.txt` extension (browsers do not share `.json` files); import validates the content, not the extension.
+File name: `darkovnik-zaloha-YYYY-MM-DD.json` (local date). The copy sent through the system share sheet has the same content and the `.txt` extension (browsers do not share `.json` files); import validates the content, not the extension.
 
 ## Import rules
 

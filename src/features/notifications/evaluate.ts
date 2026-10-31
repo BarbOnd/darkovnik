@@ -6,7 +6,7 @@ import { formatReminderSummary } from "../../lib/format";
 // No window/DOM APIs here: this module also runs in the service worker
 // (Periodic Background Sync).
 
-export const NOTIFICATION_TITLE = "Narozeniny – GiftList";
+export const NOTIFICATION_TITLE = "Narozeniny – Dárkovník";
 export const NOTIFICATION_TAG = "giftlist-birthdays";
 /** Periodic Background Sync tag registered by the app and handled by the service worker. */
 export const PERIODIC_SYNC_TAG = "giftlist-birthday-reminders";

@@ -204,7 +204,7 @@ Below the name, a collapsed **"Další podrobnosti"** section offers the same op
 
 ### Sharing into the app (Android, installed app)
 
-The installed app is registered as a share target (`share_target` in the manifest). Sharing a page from the browser or a shop app to GiftList opens quick add prefilled: the shared address goes into "Odkazy" (details are opened so it is visible) and the shared title into the gift name; the user picks the recipient(s) and saves. Only http(s) addresses are taken; everything stays local (the share is a plain GET to the app, no server). The share sheet entry appears only in Chrome/Edge on Android after installation; iOS and desktop browsers do not offer it.
+The installed app is registered as a share target (`share_target` in the manifest). Sharing a page from the browser or a shop app to Dárkovník opens quick add prefilled: the shared address goes into "Odkazy" (details are opened so it is visible) and the shared title into the gift name; the user picks the recipient(s) and saves. Only http(s) addresses are taken; everything stays local (the share is a plain GET to the app, no server). The share sheet entry appears only in Chrome/Edge on Android after installation; iOS and desktop browsers do not offer it.
 
 ## 12. Birthday reminders
 
@@ -231,7 +231,7 @@ On evaluation, the app finds reminders that are **due (due date ≤ today)**, **
 - DAY: relevant until 7 days after the birthday.
 
 For the found reminders:
-1. If notifications are enabled and permitted, show **one** system notification titled "Narozeniny – GiftList" summarizing them in gender-neutral form (e.g. "Jana: narozeniny za 30 dní · Petr: narozeniny dnes"). Tapping it opens the app.
+1. If notifications are enabled and permitted, show **one** system notification titled "Narozeniny – Dárkovník" summarizing them in gender-neutral form (e.g. "Jana: narozeniny za 30 dní · Petr: narozeniny dnes"). Tapping it opens the app.
 2. Record each reminder in NotificationLog so it is never notified again.
 3. Show the **Zmeškané připomínky** card on the People screen listing each recorded reminder (avatar, name, "narozeniny dnes / zítra / za X dní / včera / před X dny", age if known) until the user closes it. The card is built from NotificationLog, so it also shows reminders recorded by the background check while the app was closed, and it survives reloads. "Zavřít" marks the listed reminders as seen; tapping a person opens their detail.
 
@@ -242,7 +242,7 @@ If the setting is off, nothing is evaluated or recorded and the card is not show
 - Without the optional background check (unsupported browser, not installed, or not granted by the browser), nothing is evaluated while the app is closed.
 
 ### Notification permission
-When the user turns the setting on, the app asks the browser for notification permission (the Android dialog "Povolit aplikaci GiftList zobrazovat oznámení?").
+When the user turns the setting on, the app asks the browser for notification permission (the Android dialog "Povolit aplikaci Dárkovník zobrazovat oznámení?").
 - **Allowed** → system notifications + in-app card.
 - **Denied or dismissed** → the setting stays on; reminders appear only as the in-app card. Settings shows: "Systémová oznámení jsou zablokovaná. Připomínky uvidíte v aplikaci. Oznámení můžete povolit v nastavení telefonu." The app never asks repeatedly (browsers forbid it).
 - **Unsupported** browser → the same in-app-only behavior with an explanatory note.
@@ -254,13 +254,13 @@ Friendly empty states with a next action for: no people, person with no gifts, n
 ## 14. Data management (Nastavení)
 
 ### Export
-- "Exportovat data" creates a JSON file and **downloads** it as `giftlist-zaloha-YYYY-MM-DD.json` (on Android it goes to Stažené soubory / Downloads).
+- "Exportovat data" creates a JSON file and **downloads** it as `darkovnik-zaloha-YYYY-MM-DD.json` (on Android it goes to Stažené soubory / Downloads).
 - After a successful export, store `lastExportAt` and show a short toast "Záloha stažena".
 - Settings shows "Poslední záloha: před X dny" or "Zatím nezálohováno".
 - When there is data and the last export is older than 30 days (or never), show a gentle hint on the Settings screen. No pop-ups.
 
 ### Sharing the backup
-- Where the browser can share files (Web Share API: Android Chrome/Edge, iOS Safari), Settings also offers **"Sdílet zálohu"**: the same JSON content is handed to the system share sheet (Drive, messages, the new phone…) as `giftlist-zaloha-YYYY-MM-DD.txt`. Browsers refuse to share `.json` files, hence the `.txt` extension; import accepts both.
+- Where the browser can share files (Web Share API: Android Chrome/Edge, iOS Safari), Settings also offers **"Sdílet zálohu"**: the same JSON content is handed to the system share sheet (Drive, messages, the new phone…) as `darkovnik-zaloha-YYYY-MM-DD.txt`. Browsers refuse to share `.json` files, hence the `.txt` extension; import accepts both.
 - A completed share counts as a backup (`lastExportAt`, toast "Záloha odeslána"); cancelling the share sheet changes nothing.
 
 ### Import

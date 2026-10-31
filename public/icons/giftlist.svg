@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
-  <title id="title">GiftList</title>
-  <rect width="512" height="512" rx="112" fill="#9a503d"/>
-  <path fill="#fffaf7" d="M112 222h288v190H112zM96 176h320v70H96zM256 176c-57 0-88-19-88-52 0-25 18-44 43-44 27 0 45 24 45 96Zm0 0c57 0 88-19 88-52 0-25-18-44-43-44-27 0-45 24-45 96Z"/>
-  <path fill="#e7b7a6" d="M232 176h48v236h-48z"/>
+  <title id="title">Dárkovník</title>
+  <!-- Brand icon: lavender rounded square, gift box with a heart bow (palette #8E7BE0 / #E2DBFA / #F8F6FF). -->
+  <rect width="512" height="512" rx="112" fill="#8E7BE0"/>
+  <rect x="150" y="262" width="212" height="152" rx="18" fill="#DCD4F7"/>
+  <rect x="134" y="206" width="244" height="66" rx="16" fill="#F3F0FF"/>
+  <rect x="239" y="206" width="34" height="208" fill="#F8F6FF"/>
+  <path fill="#F8F6FF" d="M256 212c-14-12-56-38-56-70a30 30 0 0 1 56-10a30 30 0 0 1 56 10c0 32-42 58-56 70Z"/>
 </svg>

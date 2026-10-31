@@ -76,7 +76,7 @@ function parse(value: unknown) {
 
 describe("backup file name", () => {
   it("uses the local date", () => {
-    expect(backupFileName({ year: 2026, month: 5, day: 4 })).toBe("giftlist-zaloha-2026-05-04.json");
+    expect(backupFileName({ year: 2026, month: 5, day: 4 })).toBe("darkovnik-zaloha-2026-05-04.json");
   });
 });
 
@@ -105,14 +105,14 @@ describe("backup document validation", () => {
   it("rejects text that is not JSON", () => {
     expect(parseBackup("nesmysl")).toEqual({
       ok: false,
-      error: "Soubor není platná záloha GiftList (nejde o čitelný JSON).",
+      error: "Soubor není platná záloha Dárkovníku (nejde o čitelný JSON).",
     });
   });
 
   it.each([
-    [{ ...valid, schemaVersion: 2 }, "Záloha pochází z novější verze aplikace. Aktualizujte GiftList a zkuste to znovu."],
+    [{ ...valid, schemaVersion: 2 }, "Záloha pochází z novější verze aplikace. Aktualizujte Dárkovník a zkuste to znovu."],
     [{ ...valid, schemaVersion: "1" }, "Tuto verzi zálohy aplikace nepodporuje."],
-    [{ foo: 1 }, "Záloha není platná: soubor neobsahuje data GiftList."],
+    [{ foo: 1 }, "Záloha není platná: soubor neobsahuje data Dárkovníku."],
   ])("rejects an unsupported or foreign file %#", (document, error) => {
     expect(parse(document)).toEqual({ ok: false, error });
   });

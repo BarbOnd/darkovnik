@@ -1,4 +1,5 @@
 import { useCallback, useId, useState } from "react";
+import logoUrl from "../../assets/logo.svg";
 import { useApp } from "../../app/AppContext";
 import { paths } from "../../app/routes";
 import { Link } from "../../components/Link";
@@ -88,7 +89,10 @@ export function PeopleScreen() {
 
   return (
     <>
-      <ScreenHeader title="GiftList" />
+      <ScreenHeader
+        title="Dárkovník"
+        leading={<img className="screen-header__logo" src={logoUrl} alt="" width={32} height={32} />}
+      />
 
       <MissedRemindersCard />
       {overview.status === "ready" && overview.data.gifts.length > 0 && !reordering && (

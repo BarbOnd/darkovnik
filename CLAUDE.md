@@ -1,6 +1,10 @@
-# CLAUDE.md — GiftList
+# CLAUDE.md — GiftList (Dárkovník)
 
 Instructions for Claude working on this repository. Read this file first in every session.
+
+## Naming
+
+The user-facing name of the app is **Dárkovník** (title, manifest, header, notifications, backup file name `darkovnik-zaloha-…`, texts). **GiftList** stays the working name in code, the repository, the IndexedDB database name, storage keys and documentation prose. Never rename internal identifiers: it would orphan existing user data.
 
 ## Source of truth
 

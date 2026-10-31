@@ -62,12 +62,12 @@ export function createBackupDocument(dataset: Dataset, exportedAt: Date): Backup
 }
 
 /**
- * "giftlist-zaloha-YYYY-MM-DD.json" for a local calendar date. The shared copy
+ * "darkovnik-zaloha-YYYY-MM-DD.json" for a local calendar date. The shared copy
  * (system share sheet) uses ".txt", because browsers refuse to share ".json" files.
  */
 export function backupFileName(date: { year: number; month: number; day: number }, extension: "json" | "txt" = "json"): string {
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `giftlist-zaloha-${date.year}-${pad(date.month)}-${pad(date.day)}.${extension}`;
+  return `darkovnik-zaloha-${date.year}-${pad(date.month)}-${pad(date.day)}.${extension}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,16 +216,16 @@ export function parseBackup(fileText: string): Result<BackupDocument> {
   try {
     raw = JSON.parse(fileText);
   } catch {
-    return { ok: false, error: "Soubor není platná záloha GiftList (nejde o čitelný JSON)." };
+    return { ok: false, error: "Soubor není platná záloha Dárkovníku (nejde o čitelný JSON)." };
   }
   try {
-    if (!isObject(raw) || !("schemaVersion" in raw)) invalid("soubor neobsahuje data GiftList");
+    if (!isObject(raw) || !("schemaVersion" in raw)) invalid("soubor neobsahuje data Dárkovníku");
     if (raw.schemaVersion !== BACKUP_SCHEMA_VERSION) {
       return {
         ok: false,
         error:
           typeof raw.schemaVersion === "number" && raw.schemaVersion > BACKUP_SCHEMA_VERSION
-            ? "Záloha pochází z novější verze aplikace. Aktualizujte GiftList a zkuste to znovu."
+            ? "Záloha pochází z novější verze aplikace. Aktualizujte Dárkovník a zkuste to znovu."
             : "Tuto verzi zálohy aplikace nepodporuje.",
       };
     }

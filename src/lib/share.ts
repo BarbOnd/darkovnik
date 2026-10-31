@@ -15,7 +15,7 @@ export function canShareBackup(): boolean {
     return false;
   }
   try {
-    return navigator.canShare({ files: [backupFile("giftlist-zaloha.txt", "{}")] });
+    return navigator.canShare({ files: [backupFile("darkovnik-zaloha.txt", "{}")] });
   } catch {
     return false;
   }
@@ -25,7 +25,7 @@ export function canShareBackup(): boolean {
 export async function shareBackup(fileName: string, data: unknown): Promise<boolean> {
   const file = backupFile(fileName, JSON.stringify(data, null, 2));
   try {
-    await navigator.share({ files: [file], title: "Záloha GiftList" });
+    await navigator.share({ files: [file], title: "Záloha Dárkovníku" });
     return true;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") return false;

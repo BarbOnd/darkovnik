@@ -1,18 +1,22 @@
-/* Design tokens. Light is the default; dark follows the system unless data-theme forces a theme. */
+/*
+ * Design tokens from the brand sheet (palette #8E7BE0 lavender, #E2DBFA light lavender,
+ * #F8F6FF background, #5B4BB8 deep violet, #2B2347 dark). Light is the default;
+ * dark follows the system unless data-theme forces a theme.
+ */
 :root {
-  --color-bg: #fffaf7;
+  --color-bg: #f8f6ff;
   --color-surface: #ffffff;
-  --color-surface-muted: #f6eee9;
-  --color-text: #2b211e;
-  --color-text-muted: #6b5c56;
-  --color-border: #e8dcd5;
-  --color-accent: #9a503d;
+  --color-surface-muted: #eeeafb;
+  --color-text: #2b2347;
+  --color-text-muted: #645c8a;
+  --color-border: #dcd5f3;
+  --color-accent: #5b4bb8;
   --color-accent-text: #ffffff;
-  --color-accent-soft: #f6e4dd;
+  --color-accent-soft: #e2dbfa;
   --color-danger: #b3261e;
   --color-danger-text: #ffffff;
-  --color-focus: #9a503d;
-  --color-backdrop: rgb(43 33 30 / 45%);
+  --color-focus: #8e7be0;
+  --color-backdrop: rgb(43 35 71 / 50%);
 
   --radius: 12px;
   --radius-small: 8px;
@@ -36,36 +40,36 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #1c1715;
-    --color-surface: #262019;
-    --color-surface-muted: #2f2722;
-    --color-text: #f3ebe7;
-    --color-text-muted: #bcaea7;
-    --color-border: #42372f;
-    --color-accent: #e8a690;
-    --color-accent-text: #1c1715;
-    --color-accent-soft: #3f2c25;
+    --color-bg: #2b2347;
+    --color-surface: #352c5a;
+    --color-surface-muted: #3f3568;
+    --color-text: #f8f6ff;
+    --color-text-muted: #c4bbe8;
+    --color-border: #4a3f78;
+    --color-accent: #b9acf2;
+    --color-accent-text: #2b2347;
+    --color-accent-soft: #463b7a;
     --color-danger: #f2b8b5;
-    --color-danger-text: #1c1715;
-    --color-focus: #e8a690;
+    --color-danger-text: #2b2347;
+    --color-focus: #b9acf2;
     --color-backdrop: rgb(0 0 0 / 60%);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --color-bg: #1c1715;
-  --color-surface: #262019;
-  --color-surface-muted: #2f2722;
-  --color-text: #f3ebe7;
-  --color-text-muted: #bcaea7;
-  --color-border: #42372f;
-  --color-accent: #e8a690;
-  --color-accent-text: #1c1715;
-  --color-accent-soft: #3f2c25;
+  --color-bg: #2b2347;
+  --color-surface: #352c5a;
+  --color-surface-muted: #3f3568;
+  --color-text: #f8f6ff;
+  --color-text-muted: #c4bbe8;
+  --color-border: #4a3f78;
+  --color-accent: #b9acf2;
+  --color-accent-text: #2b2347;
+  --color-accent-soft: #463b7a;
   --color-danger: #f2b8b5;
-  --color-danger-text: #1c1715;
-  --color-focus: #e8a690;
+  --color-danger-text: #2b2347;
+  --color-focus: #b9acf2;
   --color-backdrop: rgb(0 0 0 / 60%);
   color-scheme: dark;
 }
@@ -284,6 +288,15 @@ select {
 .screen-header__actions {
   display: flex;
   align-items: center;
+}
+
+/* Brand icon next to the app title on the People screen. */
+.screen-header__logo {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  margin-right: 8px;
+  border-radius: 7px;
 }
 
 /* Sections */

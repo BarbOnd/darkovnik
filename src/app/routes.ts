@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-/** A link and/or name shared into GiftList from another app (PRODUCT.md §11), prefilled in quick add. */
+/** A link and/or name shared into the app from another app (PRODUCT.md §11), prefilled in quick add. */
 export type SharedContent = { url: string | null; title: string | null };
 
 /** Hash-based routes, so the static GitHub Pages hosting needs no server rewrites. */

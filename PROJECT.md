@@ -1,8 +1,8 @@
-# GiftList
+# Dárkovník (GiftList)
 
 ## Purpose
 
-GiftList is a personal, mobile-first Progressive Web App (PWA) for quickly saving and organizing gift ideas for different people.
+Dárkovník (working name GiftList) is a personal, mobile-first Progressive Web App (PWA) for quickly saving and organizing gift ideas for different people.
 
 Primary use case:
 

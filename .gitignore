@@ -3,5 +3,5 @@ dist/
 *.local
 coverage/
 *.tsbuildinfo
-giftlist-zaloha-*.json
-giftlist-zaloha-*.txt
+darkovnik-zaloha-*.json
+darkovnik-zaloha-*.txt

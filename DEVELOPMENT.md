@@ -88,6 +88,10 @@ High priority:
 - PWA (service worker, offline, update banner, background check): only in `npm run build` + `npm run preview`, not in `npm run dev`. Offline is verified by stopping the preview server and reloading. Headless Firefox did not complete service-worker installs in automation; headless Edge/Chrome (DevTools protocol) works, and can also dispatch a `periodicsync` event.
 - Things that need a real Android phone (installation, standalone mode, real daily background check, system notifications) are listed as open items in `TODO.md`.
 
+## Icons
+
+`public/icons/giftlist.svg` (rounded square, transparent corners) and `giftlist-maskable.svg` (full-bleed) are the sources; `src/assets/logo.svg` is a copy used in the app header. The PNG sizes (192/512, both variants) are rendered from the SVGs with headless Edge: an HTML page containing `<img src="….svg" width=N height=N>` is screenshotted with `--headless=new --window-size=N,N --default-background-color=00000000 --screenshot=…` (a temporary `--user-data-dir` per run). Re-render all four after changing an SVG.
+
 ## Windows environment notes
 
 - Do **not** edit text files with Windows PowerShell 5.1 (`Get-Content` / `Set-Content`): it reads UTF-8 without BOM as the ANSI code page and corrupts Czech characters (this happened twice). Use the editor, Claude's Edit/Write tools, or Git Bash `sed`. After scripted edits check for mojibake (`Ă`, `Ä`, `Ĺ`, `â€`) and a BOM (`ef bb bf`).
@@ -101,7 +105,7 @@ Never make a destructive storage migration without understanding the existing sc
 
 GitHub Pages, GitHub Free, public repository, HTTPS, static build. No server runtime.
 
-Do not commit personal data, exported backups (`giftlist-zaloha-*.json` belongs in `.gitignore`), secrets, API keys, or credentials.
+Do not commit personal data, exported backups (`darkovnik-zaloha-*.json` belongs in `.gitignore`), secrets, API keys, or credentials.
 
 ## Privacy testing
 

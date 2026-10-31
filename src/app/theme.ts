@@ -1,7 +1,7 @@
 import { isOneOf, THEMES, type Theme } from "../domain/entities";
 
 /** Must match --color-bg in styles/global.css and the theme-color metas in index.html. */
-const THEME_COLORS = { light: "#fffaf7", dark: "#1c1715" } as const;
+const THEME_COLORS = { light: "#f8f6ff", dark: "#2b2347" } as const;
 
 /**
  * localStorage mirror of the theme preference (IndexedDB stays the source of

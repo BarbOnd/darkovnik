@@ -1,6 +1,6 @@
-# GiftList 🎁
+# Dárkovník 🎁
 
-Personal, mobile-first gift idea manager (PWA). All data stays on the device.
+Personal, mobile-first gift idea manager (PWA). All data stays on the device. "Dárkovník" is the user-facing name; the code, repository and database keep the working name GiftList.
 
 ## Features (MVP)
 

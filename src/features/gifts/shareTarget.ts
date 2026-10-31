@@ -4,7 +4,7 @@ import { isHttpUrl } from "../../domain/links";
 const URL_IN_TEXT = /https?:\/\/\S+/i;
 
 /**
- * Reads what another app shared into GiftList (manifest `share_target`, GET:
+ * Reads what another app shared into the app (manifest `share_target`, GET:
  * `?title=…&text=…&url=…`). Android apps put the address into `url` or into
  * `text`; the page title usually comes in `title`. Only http(s) addresses are
  * taken. Returns null when nothing usable was shared.

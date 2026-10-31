@@ -120,7 +120,7 @@ Phases 2b and the quick-add details were added on the user's request during deve
 
 ## Phase 7 — Backup ✅
 
-- [x] Export JSON download `giftlist-zaloha-YYYY-MM-DD.json`, store `lastExportAt`
+- [x] Export JSON download `darkovnik-zaloha-YYYY-MM-DD.json`, store `lastExportAt`
 - [x] "Poslední záloha" info and gentle reminder after 30 days
 - [x] Import from file picker
 - [x] Validate document and merged result before writes; unsupported schema version
@@ -166,6 +166,14 @@ Phases 2b and the quick-add details were added on the user's request during deve
 - [x] Gift price (Kč) in the details, shown in the row, total of the visible gifts under the list
 - [x] Search across all gifts from the People screen
 - [x] IndexedDB version 6 migration + test; backup keeps format 1 (`note`, `price` optional on import)
+
+## Phase 12 — Brand (logo and palette from the brand sheet) ✅
+
+- [x] Palette tokens for light and dark theme, `theme-color` metas, manifest colors
+- [x] New icon (gift with a heart bow): SVG sources, PNG 192/512 + maskable rendered with headless Edge
+- [x] Icon next to the title on the People screen; slogan in "O aplikaci"
+- [x] User-facing name "Dárkovník" (title, manifest, header, notifications, backup file name `darkovnik-zaloha-…`); internal identifiers stay GiftList (CLAUDE.md → Naming)
+- [x] Fonts: decided to keep system fonts (brand fonts Outfit / Nunito are not bundled)
 
 ## Phase 9 — Release
 

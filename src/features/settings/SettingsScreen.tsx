@@ -63,7 +63,8 @@ export function SettingsScreen() {
         <h2 id="about-heading" className="section__title">
           O aplikaci
         </h2>
-        <p className="muted">GiftList, verze {version}</p>
+        <p className="muted">Dárkovník, verze {version}</p>
+        <p className="muted">Všechny dárky pod jednou mašlí.</p>
         <p className="muted">Všechna data zůstávají jen v tomto zařízení.</p>
       </section>
     </>

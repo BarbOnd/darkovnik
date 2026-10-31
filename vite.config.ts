@@ -27,17 +27,17 @@ export default defineConfig({
         rollupFormat: "iife",
       },
       manifest: {
-        name: "GiftList",
-        short_name: "GiftList",
-        description: "Osobní správce nápadů na dárky.",
+        name: "Dárkovník",
+        short_name: "Dárkovník",
+        description: "Všechny dárky pod jednou mašlí. Osobní správce nápadů na dárky.",
         lang: "cs",
         // Relative, so the app works under any GitHub Pages base path.
         id: "./",
         start_url: "./",
         scope: "./",
         display: "standalone",
-        background_color: "#fffaf7",
-        theme_color: "#fffaf7",
+        background_color: "#f8f6ff",
+        theme_color: "#f8f6ff",
         // Installed app appears in the Android share sheet; a shared page opens quick add
         // prefilled (src/features/gifts/shareTarget.ts). GET, so it works offline too.
         share_target: {

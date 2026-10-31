@@ -8,10 +8,12 @@ type ScreenHeaderProps = {
   backFallback?: string;
   backLabel?: string;
   actions?: ReactNode;
+  /** Decorative element before the title (the brand icon on the People screen). */
+  leading?: ReactNode;
 };
 
 /** Screen title; receives focus on mount so screen readers announce the new screen. */
-export function ScreenHeader({ title, backFallback, backLabel = "Zpět", actions }: ScreenHeaderProps) {
+export function ScreenHeader({ title, backFallback, backLabel = "Zpět", actions, leading }: ScreenHeaderProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export function ScreenHeader({ title, backFallback, backLabel = "Zpět", actions
           <BackIcon />
         </button>
       )}
+      {leading}
       <h1 ref={headingRef} tabIndex={-1}>
         {title}
       </h1>

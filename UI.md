@@ -10,9 +10,13 @@ Avoid visual clutter, excessive cards, heavy shadows, unnecessary gradients, exc
 
 Clean modern sans-serif via the system font stack (speed and offline reliability). No remote fonts.
 
+## Brand
+
+Logo and palette come from the brand sheet "Dárkovník": a lavender rounded square with a white gift box and a heart bow (`public/icons/giftlist.svg`, maskable variant with a full-bleed background; PNG sizes rendered from the SVG, see DEVELOPMENT.md). Palette: `#8E7BE0` lavender, `#E2DBFA` light lavender, `#F8F6FF` background, `#5B4BB8` deep violet (primary actions in the light theme), `#2B2347` dark (text in light, background in dark). The icon appears next to the title on the People screen; the slogan "Všechny dárky pod jednou mašlí." is shown in Nastavení → O aplikaci.
+
 ## Themes
 
-- Light and dark theme, implemented with CSS custom properties (design tokens).
+- Light and dark theme, implemented with CSS custom properties (design tokens) derived from the brand palette; the light theme uses `#F8F6FF` background and `#5B4BB8` accent, the dark theme `#2B2347` background and a lighter lavender accent for contrast.
 - Default follows the system (`prefers-color-scheme`); Settings can force Světlý / Tmavý. A forced theme is applied before the first render (mirrored in `localStorage`), so the start does not flash the system theme.
 - Set `<meta name="theme-color">` for both themes so the Android status bar matches.
 - Check contrast and avatar legibility in both themes.
@@ -34,7 +38,7 @@ No separate Gifts destination; gifts are accessed through a person's detail. The
 ## People screen
 
 ```text
-GiftList
+Dárkovník
 
 Zmeškané připomínky                    [Zavřít]
 ────────────────
