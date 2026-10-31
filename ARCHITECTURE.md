@@ -22,7 +22,7 @@ The UI must not access IndexedDB directly. A small repository abstraction keeps 
 ## Technology
 
 ### Vite
-Build tool and development server. For GitHub Pages, `base` in `vite.config.ts` must be set to `/<repository-name>/` (set in the release phase, phase 9; the manifest `id`, `start_url`, and `scope` are already relative so they follow `base`).
+Build tool and development server. For GitHub Pages, `base` in `vite.config.ts` is `/darkovnik/` (the repository name); the manifest `id`, `start_url`, `scope` and `share_target.action` are relative so they follow `base`, and the service worker resolves its precache against its registration scope. `npm run preview` therefore serves the app at `http://localhost:4173/darkovnik/`.
 
 ### React
 UI and component model.

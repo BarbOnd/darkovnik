@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // GitHub Pages serves the app from https://<user>.github.io/darkovnik/ (repository "darkovnik").
+  base: "/darkovnik/",
   build: {
     // One offline-cached bundle (React, DiceBear, dnd-kit) is intended; code splitting
     // would not save anything once the service worker has cached the app.
