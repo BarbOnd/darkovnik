@@ -60,7 +60,7 @@ Deleting a person requires confirmation. If the person is a buyer on other peopl
 
 - **NEW** — default. No label or icon in the normal gift list.
 - **BOUGHT** — clear but subtle check icon. Gift remains visible.
-- **GIVEN** — gift/given icon. Hidden from the default list, revealed by filtering.
+- **GIVEN** — gift/given icon. Hidden from the default list, revealed by filtering. The row shows "Předáno YYYY" (the year of the last change), so the archive reads as "Vánoce 2025".
 
 A gift has exactly one status.
 
@@ -162,7 +162,7 @@ The People screen shows, in order:
 ### Upcoming birthdays
 - Birthdays from **today to today + 30 days** (inclusive), so a person who just got the 30-day reminder is in the list.
 - Sorted by next occurrence.
-- Each row: avatar, name, date, relative time ("dnes", "zítra", "za 12 dní"), and the upcoming age only when the year is known.
+- Each row: avatar, name, date, relative time ("dnes", "zítra", "za 12 dní"), the upcoming age only when the year is known, and the number of active gifts ("0 dárků" nudges the user to add an idea).
 - People without a birthday are excluded.
 - 29 February is treated as 28 February in non-leap years.
 
@@ -189,6 +189,12 @@ Buttons:
 - **Uložit a přidat další** — creates the records, opens a fresh form with the same recipient(s) preselected and focus in the name field.
 
 Below the name, a collapsed **"Další podrobnosti"** section offers the same optional fields as gift editing (buyer, priority, tags, links, note, status), so details can be set before saving. Left closed, the gift is saved with the defaults above. Everything is saved in one transaction.
+
+**Duplicate hint:** while typing the name, if one of the selected recipients already has a gift with the same name (trimmed, case-insensitive), a hint says so ("Podobný nápad u osoby Jana už je: „Lego“. Uložit ho můžete i tak."). It never blocks saving.
+
+### Sharing into the app (Android, installed app)
+
+The installed app is registered as a share target (`share_target` in the manifest). Sharing a page from the browser or a shop app to GiftList opens quick add prefilled: the shared address goes into "Odkazy" (details are opened so it is visible) and the shared title into the gift name; the user picks the recipient(s) and saves. Only http(s) addresses are taken; everything stays local (the share is a plain GET to the app, no server). The share sheet entry appears only in Chrome/Edge on Android after installation; iOS and desktop browsers do not offer it.
 
 ## 12. Birthday reminders
 
@@ -243,8 +249,12 @@ Friendly empty states with a next action for: no people, person with no gifts, n
 - Settings shows "Poslední záloha: před X dny" or "Zatím nezálohováno".
 - When there is data and the last export is older than 30 days (or never), show a gentle hint on the Settings screen. No pop-ups.
 
+### Sharing the backup
+- Where the browser can share files (Web Share API: Android Chrome/Edge, iOS Safari), Settings also offers **"Sdílet zálohu"**: the same JSON content is handed to the system share sheet (Drive, messages, the new phone…) as `giftlist-zaloha-YYYY-MM-DD.txt`. Browsers refuse to share `.json` files, hence the `.txt` extension; import accepts both.
+- A completed share counts as a backup (`lastExportAt`, toast "Záloha odeslána"); cancelling the share sheet changes nothing.
+
 ### Import
-- "Importovat data" opens a file picker (`.json`).
+- "Importovat data" opens a file picker (`.json` or `.txt` from "Sdílet zálohu").
 - The whole file and the merged result are validated before any write; on error nothing changes and a Czech message explains the problem.
 - **Fresh installation** (no people and no gifts): import directly; existing tags are replaced by the imported ones.
 - **Installation with data:** show a confirmation first:

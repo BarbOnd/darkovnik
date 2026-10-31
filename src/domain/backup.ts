@@ -60,10 +60,13 @@ export function createBackupDocument(dataset: Dataset, exportedAt: Date): Backup
   };
 }
 
-/** "giftlist-zaloha-YYYY-MM-DD.json" for a local calendar date. */
-export function backupFileName(date: { year: number; month: number; day: number }): string {
+/**
+ * "giftlist-zaloha-YYYY-MM-DD.json" for a local calendar date. The shared copy
+ * (system share sheet) uses ".txt", because browsers refuse to share ".json" files.
+ */
+export function backupFileName(date: { year: number; month: number; day: number }, extension: "json" | "txt" = "json"): string {
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `giftlist-zaloha-${date.year}-${pad(date.month)}-${pad(date.day)}.json`;
+  return `giftlist-zaloha-${date.year}-${pad(date.month)}-${pad(date.day)}.${extension}`;
 }
 
 // ---------------------------------------------------------------------------

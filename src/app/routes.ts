@@ -1,5 +1,8 @@
 import { useSyncExternalStore } from "react";
 
+/** A link and/or name shared into GiftList from another app (PRODUCT.md §11), prefilled in quick add. */
+export type SharedContent = { url: string | null; title: string | null };
+
 /** Hash-based routes, so the static GitHub Pages hosting needs no server rewrites. */
 export type Route =
   | { name: "people" }
@@ -10,7 +13,7 @@ export type Route =
   | { name: "personEdit"; personId: number }
   | { name: "giftEdit"; giftId: number }
   /** Quick add; `personId` is preselected as recipient when opened from a person. */
-  | { name: "quickAdd"; personId: number | null }
+  | { name: "quickAdd"; personId: number | null; shared: SharedContent | null }
   | { name: "notFound" };
 
 export const paths = {
@@ -21,7 +24,15 @@ export const paths = {
   person: (personId: number) => `#/osoby/${personId}`,
   personEdit: (personId: number) => `#/osoby/${personId}/upravit`,
   giftEdit: (giftId: number) => `#/darky/${giftId}`,
-  quickAdd: (personId?: number) => (personId === undefined ? "#/pridat" : `#/pridat/${personId}`),
+  quickAdd: (personId?: number, shared?: SharedContent | null) => {
+    const base = personId === undefined ? "#/pridat" : `#/pridat/${personId}`;
+    if (shared === undefined || shared === null) return base;
+    const params = new URLSearchParams();
+    if (shared.url !== null) params.set("url", shared.url);
+    if (shared.title !== null) params.set("title", shared.title);
+    const query = params.toString();
+    return query === "" ? base : `${base}?${query}`;
+  },
 };
 
 function parseId(value: string): number | null {
@@ -29,17 +40,27 @@ function parseId(value: string): number | null {
   return Number.isSafeInteger(id) ? id : null;
 }
 
+function sharedFrom(query: string): SharedContent | null {
+  const params = new URLSearchParams(query);
+  const url = params.get("url") ?? "";
+  const title = params.get("title") ?? "";
+  if (url === "" && title === "") return null;
+  return { url: url === "" ? null : url, title: title === "" ? null : title };
+}
+
 export function parseRoute(hash: string): Route {
-  const path = hash.replace(/^#/, "").replace(/\/+$/, "");
+  // Only quick add reads the query part (shared content); other routes ignore it.
+  const [pathPart, query = ""] = hash.replace(/^#/, "").split("?", 2);
+  const path = pathPart.replace(/\/+$/, "");
   if (path === "") return { name: "people" };
   if (path === "/nastaveni") return { name: "settings" };
   if (path === "/nastaveni/stitky") return { name: "tags" };
   if (path === "/osoby/nova") return { name: "personNew" };
-  if (path === "/pridat") return { name: "quickAdd", personId: null };
+  if (path === "/pridat") return { name: "quickAdd", personId: null, shared: sharedFrom(query) };
   const quickAddMatch = /^\/pridat\/([1-9]\d*)$/.exec(path);
   if (quickAddMatch !== null) {
     const personId = parseId(quickAddMatch[1]);
-    return personId === null ? { name: "notFound" } : { name: "quickAdd", personId };
+    return personId === null ? { name: "notFound" } : { name: "quickAdd", personId, shared: sharedFrom(query) };
   }
   const personMatch = /^\/osoby\/([1-9]\d*)(?:\/(upravit))?$/.exec(path);
   if (personMatch !== null) {

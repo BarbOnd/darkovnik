@@ -7,14 +7,14 @@ Personal, mobile-first gift idea manager (PWA). All data stays on the device.
 - People: name, optional birthday (year may be unknown), alphabetical or manual order
 - Avatar: DiceBear Initial Face generated locally, or an optional photo with a circular crop editor
 - Gifts for one or several people (an independent record per recipient)
-- Quick add (`+`) incl. creating a new person, with optional details
+- Quick add (`+`) incl. creating a new person, with optional details; on Android the installed app also receives shared pages from other apps
 - Links, notes, priority, tags, optional buyer, changeable recipient
 - Status Nápad / Koupeno / Předáno; given gifts hidden by default and listed last
 - Filters by status (Aktivní / Koupeno / Předáno / Vše) and tags with AND logic
 - Sorting by priority or manually (drag handle or up/down buttons)
 - Upcoming birthdays (today … +30 days) and birthday reminders: checked when the app is opened; optionally roughly daily in the background on Android (never guaranteed)
 - Light and dark theme
-- Export (download) and merge import; restore to a new phone via export/import
+- Export (download or system share sheet) and merge import; restore to a new phone via export/import
 - Works offline, installable on Android
 
 ## Not in MVP

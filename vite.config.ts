@@ -38,6 +38,13 @@ export default defineConfig({
         display: "standalone",
         background_color: "#fffaf7",
         theme_color: "#fffaf7",
+        // Installed app appears in the Android share sheet; a shared page opens quick add
+        // prefilled (src/features/gifts/shareTarget.ts). GET, so it works offline too.
+        share_target: {
+          action: "./",
+          method: "GET",
+          params: { title: "title", text: "text", url: "url" },
+        },
         icons: [
           { src: "icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
           { src: "icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

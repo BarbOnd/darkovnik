@@ -93,6 +93,7 @@ function GiftSummary({ gift, data }: { gift: Gift; data: GiftData }) {
         <span className="gift-row__name">{gift.name}</span>
         <span className="gift-row__meta">
           <PriorityStars priority={gift.priority} />
+          {gift.status === "GIVEN" && <span>Předáno {new Date(gift.updatedAt).getFullYear()}</span>}
           {buyer !== undefined && <span>Koupí: {buyer.name}</span>}
           {tagNames.map((name) => (
             <span key={name} className="tag-label">

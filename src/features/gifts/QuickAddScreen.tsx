@@ -1,11 +1,12 @@
 import { useCallback, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useApp } from "../../app/AppContext";
-import { goBack, paths } from "../../app/routes";
+import { goBack, paths, type SharedContent } from "../../app/routes";
 import { PersonAvatar } from "../../components/PersonAvatar";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import { PlusIcon } from "../../components/icons";
-import type { Person, Tag } from "../../domain/entities";
+import type { Gift, Person, Tag } from "../../domain/entities";
+import { findSimilarGift } from "../../domain/gifts";
 import { comparePeopleByName, compareTagsByName } from "../../domain/sorting";
 import { createAvatarSeed } from "../../lib/avatar";
 import { formatCount, GIFT_FORMS } from "../../lib/plural";
@@ -13,6 +14,7 @@ import { requestPersistentStorage } from "../../lib/storage";
 import { useLoad } from "../../lib/useLoad";
 import { GiftDetailsFields } from "./GiftDetailsFields";
 import { DEFAULT_GIFT_DETAILS, prepareGiftDetails, type GiftDetails } from "./giftDetails";
+import { newLinkRow } from "./linkRows";
 
 const NAME_MAX_LENGTH = 200;
 const PERSON_NAME_MAX_LENGTH = 100;
@@ -23,11 +25,21 @@ type QuickAddError = {
   linkRowKey?: string;
 };
 
-function QuickAddForm({ initialPeople, tags, preselectedId, closeTo }: {
+/** Details prefilled from content shared by another app: the link goes into "Odkazy". */
+function detailsFromShared(shared: SharedContent | null): GiftDetails {
+  if (shared === null || shared.url === null) return DEFAULT_GIFT_DETAILS;
+  return { ...DEFAULT_GIFT_DETAILS, links: [{ ...newLinkRow(), url: shared.url }] };
+}
+
+function QuickAddForm({ initialPeople, initialGifts, tags, preselectedId, shared, closeTo }: {
   initialPeople: Person[];
+  /** All gifts, for the duplicate hint. */
+  initialGifts: Gift[];
   /** Tags sorted by name. */
   tags: Tag[];
   preselectedId: number | null;
+  /** Link and/or name shared from another app (PRODUCT.md §11). */
+  shared: SharedContent | null;
   /** Where "Uložit" / "Zrušit" return when there is no previous in-app screen. */
   closeTo: string;
 }) {
@@ -36,18 +48,21 @@ function QuickAddForm({ initialPeople, tags, preselectedId, closeTo }: {
   const nameRef = useRef<HTMLInputElement>(null);
   const newPersonRef = useRef<HTMLInputElement>(null);
   const [people, setPeople] = useState(() => [...initialPeople].sort(comparePeopleByName));
+  const [gifts, setGifts] = useState(initialGifts);
   const [recipientIds, setRecipientIds] = useState<number[]>(() =>
     preselectedId !== null && initialPeople.some((person) => person.id === preselectedId) ? [preselectedId] : [],
   );
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => shared?.title?.slice(0, NAME_MAX_LENGTH) ?? "");
   // With nobody to choose from, the flow starts directly with the new-person field.
   const [addingPerson, setAddingPerson] = useState(initialPeople.length === 0);
   const [newPersonName, setNewPersonName] = useState("");
   const [error, setError] = useState<QuickAddError | null>(null);
   const [saving, setSaving] = useState(false);
-  // Optional details stay collapsed so the quick flow stays quick.
-  const [details, setDetails] = useState<GiftDetails>(DEFAULT_GIFT_DETAILS);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  // Optional details stay collapsed so the quick flow stays quick; a shared link opens them so it is visible.
+  const [details, setDetails] = useState<GiftDetails>(() => detailsFromShared(shared));
+  const [detailsOpen, setDetailsOpen] = useState(shared?.url != null);
+  const similar = findSimilarGift(gifts, recipientIds, name);
+  const similarOwner = similar === undefined ? undefined : people.find((person) => person.id === similar.personId);
 
   function toggleRecipient(personId: number) {
     setRecipientIds((current) =>
@@ -116,13 +131,15 @@ function QuickAddForm({ initialPeople, tags, preselectedId, closeTo }: {
         setError({ field: "links", message: prepared.error, linkRowKey: prepared.linkRowKey });
         return;
       }
-      await repository.createGiftsWithLinks({
+      const created = await repository.createGiftsWithLinks({
         ...prepared.value.fields,
         name: giftName,
         personIds: recipients,
         links: prepared.value.links,
         tagIds: prepared.value.tagIds,
       });
+      // Keeps the duplicate hint accurate for "Uložit a přidat další".
+      setGifts((current) => [...current, ...created]);
       showToast(recipients.length === 1 ? "Uloženo" : `Uloženo – ${formatCount(recipients.length, GIFT_FORMS)}`);
       if (addAnother) {
         // A fresh gift for the same recipients: name and details start over.
@@ -239,6 +256,11 @@ function QuickAddForm({ initialPeople, tags, preselectedId, closeTo }: {
           aria-describedby={error?.field === "name" ? errorId : undefined}
           onChange={(event) => setName(event.target.value)}
         />
+        {similar !== undefined && similarOwner !== undefined && (
+          <p className="field__hint" role="status">
+            Podobný nápad u osoby {similarOwner.name} už je: „{similar.name}“. Uložit ho můžete i tak.
+          </p>
+        )}
       </div>
 
       <GiftDetailsFields
@@ -273,11 +295,15 @@ function QuickAddForm({ initialPeople, tags, preselectedId, closeTo }: {
 }
 
 /** Quick add: recipient(s) → gift name → Uložit (PRODUCT.md §11). */
-export function QuickAddScreen({ personId }: { personId: number | null }) {
+export function QuickAddScreen({ personId, shared }: { personId: number | null; shared: SharedContent | null }) {
   const { repository } = useApp();
   const load = useCallback(async () => {
-    const [people, tags] = await Promise.all([repository.listPeople(), repository.listTags()]);
-    return { people, tags: [...tags].sort(compareTagsByName) };
+    const [people, gifts, tags] = await Promise.all([
+      repository.listPeople(),
+      repository.listGifts(),
+      repository.listTags(),
+    ]);
+    return { people, gifts, tags: [...tags].sort(compareTagsByName) };
   }, [repository]);
   const options = useLoad(load);
   const closeTo = personId === null ? paths.people() : paths.person(personId);
@@ -285,13 +311,16 @@ export function QuickAddScreen({ personId }: { personId: number | null }) {
   return (
     <>
       <ScreenHeader title="Přidat dárek" backFallback={closeTo} />
+      {shared !== null && <p className="muted">Nápad ze sdílené stránky. Zkontrolujte název a vyberte, pro koho je.</p>}
       {options.status === "loading" && <StatusMessage kind="loading" />}
       {options.status === "error" && <StatusMessage kind="error" message="Seznam lidí se nepodařilo načíst." />}
       {options.status === "ready" && (
         <QuickAddForm
           initialPeople={options.data.people}
+          initialGifts={options.data.gifts}
           tags={options.data.tags}
           preselectedId={personId}
+          shared={shared}
           closeTo={closeTo}
         />
       )}

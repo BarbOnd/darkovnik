@@ -44,9 +44,9 @@ Zmeškané připomínky                    [Zavřít]
 Nadcházející narozeniny
 ────────────────
 [ avatar ] Jana                          🎂
-           dnes · 31 let
+           dnes · 31 let · 2 dárky
 [ avatar ] Petr
-           14. května · za 12 dní
+           14. května · za 12 dní · 0 dárků
 
 Lidé                     [Abecedně ▾]
 ────────────────
@@ -142,6 +142,8 @@ Do not make the form feel administrative: optional fields are collapsed under "D
 
 - "+ Nová osoba" shows an inline name field; confirming creates and selects the person.
 - With no people yet, the inline name field is shown immediately.
+- Under the name, a quiet hint appears when a selected recipient already has a gift with the same name (PRODUCT.md §11); it does not block saving.
+- Opened from the Android share sheet, a short line "Nápad ze sdílené stránky…" is shown under the title, the name is prefilled from the shared title and "Další podrobnosti" is open with the shared address in "Odkazy".
 - After "Uložit", close the flow and show a short toast "Uloženo" ("Uloženo – N dárky" for several recipients) above the bottom navigation.
 - After "Uložit a přidat další", clear the name and reset the details to defaults, keep recipients, focus the name field.
 
@@ -149,7 +151,7 @@ Do not make the form feel administrative: optional fields are collapsed under "D
 
 - NEW: no indicator.
 - BOUGHT: subtle check icon, accessible name "Koupeno".
-- GIVEN: gift icon, accessible name "Předáno".
+- GIVEN: gift icon, accessible name "Předáno"; the meta line adds "Předáno 2025".
 
 ## Tags
 
@@ -171,6 +173,7 @@ Vzhled         Podle systému / Světlý / Tmavý
 
 Data
   [Exportovat data]
+  [Sdílet zálohu]        (only where the browser can share files)
   [Importovat data]
   Poslední záloha: před 12 dny
   (případná nenápadná připomínka k zálohování)

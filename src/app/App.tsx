@@ -41,7 +41,7 @@ function Screen({ route }: { route: Route }) {
     case "personEdit":
       return <EditPersonScreen key={route.personId} personId={route.personId} />;
     case "quickAdd":
-      return <QuickAddScreen key={route.personId ?? "none"} personId={route.personId} />;
+      return <QuickAddScreen key={route.personId ?? "none"} personId={route.personId} shared={route.shared} />;
     case "giftEdit":
       return <EditGiftScreen key={route.giftId} giftId={route.giftId} />;
     case "notFound":

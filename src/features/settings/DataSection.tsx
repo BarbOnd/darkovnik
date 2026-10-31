@@ -6,6 +6,7 @@ import { ImportError } from "../../db/repository";
 import { backupFileName, parseBackup, type BackupDocument, type EntityCounts } from "../../domain/backup";
 import { localDateOf } from "../../domain/birthdays";
 import { downloadJson } from "../../lib/download";
+import { canShareBackup, shareBackup } from "../../lib/share";
 import { persistenceState } from "../../lib/storage";
 import { useLoad } from "../../lib/useLoad";
 import { importSummaryText, lastBackupText, overwriteText, shouldSuggestBackup } from "./backupText";
@@ -50,10 +51,11 @@ function ImportConfirmDialog({ updated, onCancel, onConfirm, busy }: {
 /** Export, import and storage status (PRODUCT.md §14). */
 export function DataSection() {
   const { repository, metadata, updatePreferences, reloadMetadata, showToast } = useApp();
-  const [busy, setBusy] = useState<"export" | "import" | null>(null);
+  const [busy, setBusy] = useState<"export" | "share" | "import" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [shareAvailable] = useState(canShareBackup);
 
   const load = useCallback(async () => {
     const [fresh, persistence] = await Promise.all([repository.isFreshInstallation(), persistenceState()]);
@@ -73,6 +75,24 @@ export function DataSection() {
       showToast("Záloha stažena");
     } catch {
       setError("Zálohu se nepodařilo vytvořit. Zkuste to prosím znovu.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** Hands the backup to another app (Drive, messages, the new phone); counts as a backup when sent. */
+  async function handleShare() {
+    setBusy("share");
+    setError(null);
+    setSummary(null);
+    try {
+      const document = await repository.exportBackup();
+      if (await shareBackup(backupFileName(today, "txt"), document)) {
+        await updatePreferences({ lastExportAt: new Date().toISOString() });
+        showToast("Záloha odeslána");
+      }
+    } catch {
+      setError("Zálohu se nepodařilo sdílet. Zkuste ji exportovat do souboru.");
     } finally {
       setBusy(null);
     }
@@ -141,10 +161,20 @@ export function DataSection() {
         >
           {busy === "export" ? "Exportuji…" : "Exportovat data"}
         </button>
+        {shareAvailable && (
+          <button
+            type="button"
+            className="button button--secondary"
+            disabled={busy !== null}
+            onClick={() => void handleShare()}
+          >
+            {busy === "share" ? "Sdílím…" : "Sdílet zálohu"}
+          </button>
+        )}
         <label className="button button--ghost file-button" aria-disabled={busy !== null}>
           <input
             type="file"
-            accept="application/json,.json"
+            accept="application/json,text/plain,.json,.txt"
             className="visually-hidden"
             disabled={busy !== null}
             onChange={(event) => void handleFile(event)}
@@ -154,6 +184,12 @@ export function DataSection() {
       </div>
 
       <p className="muted">{lastBackupText(metadata.lastExportAt, today)}</p>
+      {shareAvailable && (
+        <p className="field__hint">
+          Sdílení pošle zálohu jako textový soubor (.txt), třeba na Disk nebo rovnou do nového telefonu. Import ho přijme stejně
+          jako .json.
+        </p>
+      )}
       {status.status === "ready" && shouldSuggestBackup(status.data.hasData, metadata.lastExportAt, today) && (
         <p className="field__hint">
           Tip: zálohu si občas stáhněte. Hodí se hlavně při výměně telefonu – data jsou uložená jen v tomto zařízení.

@@ -47,7 +47,7 @@ export function PeopleScreen() {
 
       <MissedRemindersCard />
       {overview.status === "ready" && overview.data.people.length > 0 && !reordering && (
-        <UpcomingBirthdays people={overview.data.people} />
+        <UpcomingBirthdays people={overview.data.people} activeGiftCounts={overview.data.activeGiftCounts} />
       )}
 
       <section className="section" aria-labelledby="people-heading">

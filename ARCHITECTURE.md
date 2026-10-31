@@ -115,7 +115,11 @@ On import, imported IDs are preserved and counters advanced (never decreased).
 
 ## Import/export
 
-Versioned JSON document, see DATABASE.md. Export downloads a file via a Blob and an `<a download>` link. Import reads a file chosen with `<input type="file" accept="application/json,.json">`.
+Versioned JSON document, see DATABASE.md. Export downloads a file via a Blob and an `<a download>` link; "Sdílet zálohu" hands the same content to the Web Share API as a `text/plain` `.txt` file where `navigator.canShare({ files })` allows it (`lib/share.ts`). Import reads a file chosen with `<input type="file" accept="application/json,text/plain,.json,.txt">`.
+
+## Share target
+
+The manifest registers the installed app as an Android share target (GET to `./` with `title`, `text`, `url`). `main.tsx` parses the query (`features/gifts/shareTarget.ts`), replaces it with the quick-add hash route carrying the shared link and name, and quick add prefills the form. No server is involved; offline the service worker serves `index.html` for the navigation like for any other.
 
 Before any write: parse safely, validate the document and the merged result (schema version, records, enums, IDs, references, URLs, birthday format, tag uniqueness). If validation fails, do not modify the database. Perform all writes in one transaction.
 

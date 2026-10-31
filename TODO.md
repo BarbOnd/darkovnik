@@ -151,6 +151,21 @@ Phases 2b and the quick-add details were added on the user's request during deve
 - [x] Version 1.0.0 in package.json ("O aplikaci"), `apple-touch-icon` for iOS
 - [x] Docs: PRODUCT §2/§12, DATABASE (NotificationLog, migration v5, theme mirror), UI, ARCHITECTURE
 
+## Phase 10 — Improvements from the review (part 1, no schema change) ✅
+
+- [x] Android share target: shared page → quick add prefilled (link + name), `share_target` in the manifest
+- [x] "Sdílet zálohu" through the system share sheet (Web Share API, `.txt`), import accepts `.txt`
+- [x] Active gift count in "Nadcházející narozeniny" rows
+- [x] "Předáno YYYY" in the gift row
+- [x] Duplicate hint in quick add (same name for a selected recipient)
+- [ ] Verify the share sheet entry and backup sharing on Android (after phase 9)
+
+## Phase 11 — Improvements from the review (part 2, schema version 6)
+
+- [ ] Person note (sizes, interests, what they already have)
+- [ ] Gift price / budget, sum per person
+- [ ] Search across all gifts from the People screen
+
 ## Phase 9 — Release
 
 - [ ] Decide with the user before the first push: repository name (→ `base`) and the commit author e-mail (all commits so far use the user's work e-mail, which becomes public; it can be rewritten to the GitHub noreply address only before pushing)

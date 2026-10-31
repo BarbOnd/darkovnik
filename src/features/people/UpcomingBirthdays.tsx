@@ -4,10 +4,16 @@ import { PersonAvatar } from "../../components/PersonAvatar";
 import { localDateOf, upcomingBirthdays, UPCOMING_WINDOW_DAYS } from "../../domain/birthdays";
 import type { Person } from "../../domain/entities";
 import { formatDayMonth, formatRelativeDays } from "../../lib/format";
-import { formatCount, YEAR_FORMS } from "../../lib/plural";
+import { formatCount, GIFT_FORMS, YEAR_FORMS } from "../../lib/plural";
 
-/** Birthdays from today to today + 30 days (PRODUCT.md §10). */
-export function UpcomingBirthdays({ people }: { people: Person[] }) {
+/** Birthdays from today to today + 30 days (PRODUCT.md §10), each with the person's active gift count. */
+export function UpcomingBirthdays({
+  people,
+  activeGiftCounts,
+}: {
+  people: Person[];
+  activeGiftCounts: ReadonlyMap<number, number>;
+}) {
   const upcoming = upcomingBirthdays(people, localDateOf(new Date()));
 
   return (
@@ -28,6 +34,7 @@ export function UpcomingBirthdays({ people }: { people: Person[] }) {
                   <span className="birthday-row__meta">
                     {daysUntil <= 1 ? formatRelativeDays(daysUntil) : `${formatDayMonth(occurrence)} · ${formatRelativeDays(daysUntil)}`}
                     {age !== null && ` · ${formatCount(age, YEAR_FORMS)}`}
+                    {` · ${formatCount(activeGiftCounts.get(person.id) ?? 0, GIFT_FORMS)}`}
                   </span>
                 </span>
                 {daysUntil === 0 && (
