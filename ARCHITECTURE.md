@@ -32,7 +32,7 @@ Strict mode. Avoid `any` unless there is a documented reason.
 
 ### PWA
 The application must:
-- provide a web app manifest with icons (incl. a maskable icon for Android);
+- provide a web app manifest with icons (incl. a maskable icon for Android) and an `apple-touch-icon` link in `index.html` (iOS ignores manifest icons for the home screen);
 - support installation on Android, standalone display mode;
 - cache the application shell for offline use;
 - work correctly after installation.
@@ -49,7 +49,7 @@ Multi-step writes run in one readwrite transaction. New code uses the repository
 Call `navigator.storage.persist()` to request persistent storage (see PRODUCT.md §14).
 
 ### Theme
-CSS custom properties for colors; `prefers-color-scheme` for the system default; a `data-theme` attribute on `<html>` when the user forces light/dark.
+CSS custom properties for colors; `prefers-color-scheme` for the system default; a `data-theme` attribute on `<html>` when the user forces light/dark. The preference lives in IndexedDB metadata and is mirrored in `localStorage` (`giftlist.theme`) solely so `main.tsx` can apply it before the database opens (no flash of the system theme); the mirror is never read for anything else.
 
 ## Domain separation
 
@@ -124,7 +124,7 @@ Before any write: parse safely, validate the document and the merged result (sch
 No reliable exact-time background scheduling exists for PWAs on Android without a push server. Therefore:
 - reminders are evaluated on app start, on `visibilitychange` to visible, and hourly while open;
 - system notifications are shown via `ServiceWorkerRegistration.showNotification()` (falls back to `new Notification()` where needed) when permission is granted;
-- shown reminders are recorded in the `notificationLog` store;
+- shown reminders are recorded in the `notificationLog` store; the "Zmeškané připomínky" card is built from its unseen entries (`seenAt = null`) and "Zavřít" marks them seen, so the card survives reloads and also shows reminders recorded by the background check;
 - no Push API server, Firebase, OneSignal, cron, or other backend;
 - the UI never claims delivery while the app is closed.
 

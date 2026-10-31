@@ -4,8 +4,8 @@ import { paths } from "../../app/routes";
 import { Link } from "../../components/Link";
 import { ReorderList } from "../../components/ReorderList";
 import { StatusMessage } from "../../components/StatusMessage";
-import { CheckIcon, GiftIcon, PlusIcon } from "../../components/icons";
-import { GIFT_SORT_MODES, isOneOf, type Gift, type Person, type Tag } from "../../domain/entities";
+import { CheckIcon, ExternalIcon, GiftIcon, PlusIcon } from "../../components/icons";
+import { GIFT_SORT_MODES, isOneOf, type Gift, type GiftLink, type Person, type Tag } from "../../domain/entities";
 import {
   canReorderWithFilter,
   DEFAULT_GIFT_FILTER,
@@ -15,7 +15,9 @@ import {
   type GiftFilter,
   type StatusFilter,
 } from "../../domain/giftFilters";
-import { compareTagsByName, givenLast, reorderSubset, sortGifts } from "../../domain/sorting";
+import { linkLabel } from "../../domain/links";
+import { compareBySortOrder, compareTagsByName, givenLast, reorderSubset, sortGifts } from "../../domain/sorting";
+import { formatCount, LINK_FORMS } from "../../lib/plural";
 import { useLoad } from "../../lib/useLoad";
 import { PriorityStars } from "./PriorityStars";
 
@@ -64,17 +66,27 @@ function AddGiftButton({ personId }: { personId: number }) {
   );
 }
 
+/** The gift's first link (by order) and how many links it has, for the shortcut in the row. */
+type GiftLinks = { first: GiftLink; count: number };
+
 type GiftData = {
   gifts: Gift[];
   peopleById: Map<number, Person>;
   tags: Tag[];
   tagIdsByGift: Map<number, Set<number>>;
+  linksByGift: Map<number, GiftLinks>;
 };
+
+/** First line of the note, shown in the row; the full note is in the edit form. */
+function notePreview(note: string): string {
+  return note.split("\n")[0].trim();
+}
 
 function GiftSummary({ gift, data }: { gift: Gift; data: GiftData }) {
   const buyer = gift.buyerPersonId === null ? undefined : data.peopleById.get(gift.buyerPersonId);
   const tagIds = data.tagIdsByGift.get(gift.id);
   const tagNames = data.tags.filter((tag) => tagIds?.has(tag.id)).map((tag) => tag.name);
+  const note = notePreview(gift.note);
   return (
     <>
       <span className="gift-row__text">
@@ -88,9 +100,31 @@ function GiftSummary({ gift, data }: { gift: Gift; data: GiftData }) {
             </span>
           ))}
         </span>
+        {note !== "" && <span className="gift-row__note">{note}</span>}
       </span>
       <StatusIndicator status={gift.status} />
     </>
+  );
+}
+
+/** Opens the gift's first link externally without opening the edit form (UI.md → Person detail). */
+function OpenLinkButton({ gift, links }: { gift: Gift; links: GiftLinks }) {
+  const label = linkLabel(links.first);
+  const description =
+    links.count === 1
+      ? `Otevřít odkaz: ${label}`
+      : `Otevřít odkaz: ${label}. Dárek ${gift.name} má ${formatCount(links.count, LINK_FORMS)}.`;
+  return (
+    <a
+      className="icon-button gift-row__open"
+      href={links.first.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={description}
+      title={label}
+    >
+      <ExternalIcon />
+    </a>
   );
 }
 
@@ -249,16 +283,20 @@ function GiftRows({ personId, data, onReordered }: { personId: number; data: Gif
         </div>
       ) : (
         <ul className="gift-list">
-          {visible.map((gift) => (
-            <li key={gift.id}>
-              <Link
-                className={gift.status === "GIVEN" ? "gift-row gift-row--given" : "gift-row"}
-                href={paths.giftEdit(gift.id)}
-              >
-                <GiftSummary gift={gift} data={data} />
-              </Link>
-            </li>
-          ))}
+          {visible.map((gift) => {
+            const links = data.linksByGift.get(gift.id);
+            return (
+              <li key={gift.id} className="gift-list__item">
+                <Link
+                  className={gift.status === "GIVEN" ? "gift-row gift-row--given" : "gift-row"}
+                  href={paths.giftEdit(gift.id)}
+                >
+                  <GiftSummary gift={gift} data={data} />
+                </Link>
+                {links !== undefined && <OpenLinkButton gift={gift} links={links} />}
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -280,11 +318,12 @@ function GiftRows({ personId, data, onReordered }: { personId: number; data: Gif
 export function GiftList({ person }: { person: Person }) {
   const { repository } = useApp();
   const load = useCallback(async (): Promise<GiftData> => {
-    const [gifts, people, tags, giftTags] = await Promise.all([
+    const [gifts, people, tags, giftTags, giftLinks] = await Promise.all([
       repository.listGiftsByPerson(person.id),
       repository.listPeople(),
       repository.listTags(),
       repository.listAllGiftTags(),
+      repository.listAllGiftLinks(),
     ]);
     const tagIdsByGift = new Map<number, Set<number>>();
     giftTags.forEach(({ giftId, tagId }) => {
@@ -292,11 +331,17 @@ export function GiftList({ person }: { person: Person }) {
       set.add(tagId);
       tagIdsByGift.set(giftId, set);
     });
+    const linksByGift = new Map<number, GiftLinks>();
+    [...giftLinks].sort(compareBySortOrder).forEach((link) => {
+      const current = linksByGift.get(link.giftId);
+      linksByGift.set(link.giftId, current === undefined ? { first: link, count: 1 } : { ...current, count: current.count + 1 });
+    });
     return {
       gifts,
       peopleById: new Map(people.map((other) => [other.id, other])),
       tags: [...tags].sort(compareTagsByName),
       tagIdsByGift,
+      linksByGift,
     };
   }, [repository, person.id]);
   const result = useLoad(load);

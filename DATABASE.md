@@ -140,7 +140,7 @@ The `metadata` store holds one application record:
 
 ```text
 - key: "app"                   // the single record's key
-- schemaVersion: number        // IndexedDB schema version (currently 4); NOT the backup file version
+- schemaVersion: number        // IndexedDB schema version (currently 5); NOT the backup file version
 - initializationComplete: boolean   // set when the default tags were created on first start
 - highestPersonId: number
 - highestGiftId: number
@@ -155,11 +155,11 @@ The `metadata` store holds one application record:
 
 ID counters must never decrease after deletion. This applies to people, gifts, tags, and gift links. The counter represents the highest ID ever allocated, not the current maximum record ID.
 
-`lastExportAt`, `peopleSortMode`, `giftSortMode`, and `theme` are device preferences and are **not** exported.
+`lastExportAt`, `peopleSortMode`, `giftSortMode`, and `theme` are device preferences and are **not** exported. `theme` is additionally mirrored in `localStorage` (`giftlist.theme`) only so the forced theme applies before the database opens; IndexedDB remains the source of truth.
 
 ## NotificationLog
 
-Remembers which birthday reminders were already shown on this device, so a reminder is never shown twice.
+Remembers which birthday reminders were already shown on this device, so a reminder is never shown twice, and which of them the user has already closed in the app.
 
 ```text
 NotificationLog
@@ -167,10 +167,13 @@ NotificationLog
 - personId: number
 - type: "BEFORE_30" | "DAY"
 - occurrenceDate: string   // YYYY-MM-DD of the birthday occurrence it belongs to
-- shownAt: string          // ISO-8601
+- shownAt: string          // ISO-8601, when the reminder was recorded (notification shown)
+- seenAt: string | null    // ISO-8601, when the user closed it in the "Zmeškané připomínky" card; null until then
 ```
 
 NotificationLog is device-local and is **not** exported. Recording reminders is atomic: only keys not yet present are recorded and shown (so two open windows or the background check never show one reminder twice); entries of deleted people are skipped. Entries older than about one year (366 days) are removed when new reminders are recorded.
+
+The "Zmeškané připomínky" card lists every entry with `seenAt = null` (joined with the current people; entries of deleted people are skipped), so reminders recorded by the background check or in a previous session are not lost. "Zavřít" sets `seenAt` on the listed entries.
 
 ## Sorting
 
@@ -292,7 +295,7 @@ Treat a 29 February birthday as 28 February in a non-leap year.
 
 ## Schema migrations
 
-The current IndexedDB version is **4**.
+The current IndexedDB version is **5**.
 
 The migration from version 1 to 2 (version 1 had no `sortOrder`, metadata preferences, or `notificationLog`):
 - backfills `Person.sortOrder` by name (cs-CZ);
@@ -304,3 +307,5 @@ The migration from version 1 to 2 (version 1 had no `sortOrder`, metadata prefer
 The migration from version 2 to 3 adds `photo: null` to every existing person and keeps all other data and preferences.
 
 The migration from version 3 to 4 sets `photoSource` and `photoCrop`: an existing photo becomes its own source with the initial crop (`zoom 1`, centered); people without a photo get nulls.
+
+The migration from version 4 to 5 adds `seenAt` to every NotificationLog entry, set to its `shownAt` (reminders shown before the upgrade count as seen, so the upgrade does not revive old reminders).

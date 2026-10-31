@@ -1,6 +1,6 @@
 import { useCallback, useId, useState, type FormEvent } from "react";
 import { useApp } from "../../app/AppContext";
-import { goBack, paths } from "../../app/routes";
+import { goBack, paths, replaceRoute } from "../../app/routes";
 import { Dialog } from "../../components/Dialog";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
@@ -176,7 +176,7 @@ function DeleteGiftDialog({ gift, onClose }: { gift: Gift; onClose(): void }) {
 }
 
 export function EditGiftScreen({ giftId }: { giftId: number }) {
-  const { repository } = useApp();
+  const { repository, showToast } = useApp();
   const [deleting, setDeleting] = useState(false);
   const load = useCallback(async () => {
     const gift = await repository.getGift(giftId);
@@ -223,7 +223,14 @@ export function EditGiftScreen({ giftId }: { giftId: number }) {
           cancelFallback={paths.person(data.gift.personId)}
           onSubmit={async ({ recipientId, name, fields, links, tagIds }) => {
             await repository.saveGiftWithLinks(giftId, { ...fields, name, personId: recipientId }, links, tagIds);
-            goBack(paths.person(data.gift.personId));
+            if (recipientId === data.gift.personId) {
+              goBack(paths.person(data.gift.personId));
+              return;
+            }
+            // The gift moved: show it in the new recipient's list instead of the old one, where it vanished.
+            const recipient = data.people.find((person) => person.id === recipientId);
+            showToast(recipient === undefined ? "Přesunuto k jiné osobě" : `Přesunuto k osobě ${recipient.name}`);
+            replaceRoute(paths.person(recipientId));
           }}
           onDelete={() => setDeleting(true)}
         />

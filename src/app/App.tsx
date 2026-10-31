@@ -24,7 +24,7 @@ import { UpdateBanner } from "./UpdateBanner";
 
 const TOAST_DURATION_MS = 2500;
 
-type StartState ={ status: "loading" } | { status: "ready"; metadata: AppMetadata } | { status: "error" };
+type StartState = { status: "loading" } | { status: "ready"; metadata: AppMetadata } | { status: "error" };
 
 function Screen({ route }: { route: Route }) {
   switch (route.name) {
@@ -99,8 +99,11 @@ export function App() {
     };
   }, [repository]);
 
-  const theme = start.status === "ready" ? start.metadata.theme : "SYSTEM";
-  useEffect(() => applyTheme(theme), [theme]);
+  // Until the database opens, the theme mirrored in localStorage (main.tsx) stays applied.
+  const theme = start.status === "ready" ? start.metadata.theme : null;
+  useEffect(() => {
+    if (theme !== null) applyTheme(theme);
+  }, [theme]);
 
   const updatePreferences = useCallback(
     async (input: UpdatePreferencesInput) => {

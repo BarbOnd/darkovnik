@@ -1,11 +1,11 @@
-import type { Gift, Person } from "../domain/entities";
+import type { Gift, NotificationLogEntry, Person } from "../domain/entities";
 import { INITIAL_CROP_VIEW } from "../domain/photo";
 import { compareGiftsByPriority, comparePeopleByName } from "../domain/sorting";
 import { requestResult } from "./idb";
 import { DEFAULT_V2_PREFERENCES, METADATA_KEY, type MetadataRecord } from "./metadata";
 
 export const DATABASE_NAME = "giftlist";
-export const DATABASE_VERSION = 4;
+export const DATABASE_VERSION = 5;
 
 export const STORE_NAMES = {
   people: "people",
@@ -115,6 +115,22 @@ async function migrateToVersion4(transaction: IDBTransaction): Promise<void> {
   if (metadata !== undefined) metadataStore.put({ ...metadata, schemaVersion: 4 });
 }
 
+/**
+ * Version 5: `NotificationLogEntry.seenAt`. Reminders shown before this version
+ * are treated as already seen, so the upgrade does not revive old reminders.
+ */
+async function migrateToVersion5(transaction: IDBTransaction): Promise<void> {
+  const logStore = transaction.objectStore(STORE_NAMES.notificationLog);
+  const entries = await requestResult(logStore.getAll() as IDBRequest<Omit<NotificationLogEntry, "seenAt">[]>);
+  entries.forEach((entry) => logStore.put({ ...entry, seenAt: entry.shownAt }));
+
+  const metadataStore = transaction.objectStore(STORE_NAMES.metadata);
+  const metadata = await requestResult(
+    metadataStore.get(METADATA_KEY) as IDBRequest<MetadataRecord | undefined>,
+  );
+  if (metadata !== undefined) metadataStore.put({ ...metadata, schemaVersion: 5 });
+}
+
 export function openGiftListDatabase(name = DATABASE_NAME): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(name, DATABASE_VERSION);
@@ -129,6 +145,7 @@ export function openGiftListDatabase(name = DATABASE_NAME): Promise<IDBDatabase>
         if (event.oldVersion < 2) await migrateToVersion2(database, upgradeTransaction);
         if (event.oldVersion < 3) await migrateToVersion3(upgradeTransaction);
         if (event.oldVersion < 4) await migrateToVersion4(upgradeTransaction);
+        if (event.oldVersion < 5) await migrateToVersion5(upgradeTransaction);
       };
       runMigrations().catch(() => {
         try {

@@ -110,7 +110,7 @@ Phases 2b and the quick-add details were added on the user's request during deve
 - [x] Birthday logic: next occurrence, age (only with year), 29 Feb, local dates
 - [x] Upcoming birthdays today … today + 30
 - [x] Global toggle in Settings; permission request on enabling
-- [x] Reminder evaluation on start, on visibility change, daily while open
+- [x] Reminder evaluation on start, on visibility change, hourly while open
 - [x] Types BEFORE_30 and DAY, relevance windows, NotificationLog deduplication
 - [x] One summarizing system notification when permitted
 - [x] "Zmeškané připomínky" card on the People screen
@@ -141,6 +141,15 @@ Phases 2b and the quick-add details were added on the user's request during deve
 - [ ] Test installation on Android, standalone mode (needs a device; after phase 9 on HTTPS)
 - [x] Test offline CRUD and persistence after restart (desktop Edge with the server stopped: reload, deep link, data kept; repeat on Android)
 - [x] Verify no runtime external API is required
+
+## Review fixes after phase 8 ✅
+
+- [x] "Zmeškané připomínky" built from NotificationLog (`seenAt`, IndexedDB version 5): survives reloads, shows reminders from the background check, "Zavřít" marks them seen
+- [x] Forced theme applied before the first render (localStorage mirror), no flash of the system theme
+- [x] Gift row: "open link" shortcut and one-line note preview
+- [x] After changing a gift's recipient, open the new recipient's list with a toast
+- [x] Version 1.0.0 in package.json ("O aplikaci"), `apple-touch-icon` for iOS
+- [x] Docs: PRODUCT §2/§12, DATABASE (NotificationLog, migration v5, theme mirror), UI, ARCHITECTURE
 
 ## Phase 9 — Release
 

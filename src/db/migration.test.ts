@@ -110,7 +110,7 @@ describe("IndexedDB migration v1 → current", () => {
     expect((await repository.listTags()).map((tag) => tag.name)).toEqual(["Narozeniny"]);
 
     expect(await repository.getMetadata()).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 5,
       highestPersonId: 6,
       highestGiftId: 9,
       highestTagId: 3,
@@ -124,7 +124,7 @@ describe("IndexedDB migration v1 → current", () => {
     });
 
     const database = await openGiftListDatabase(DATABASE_NAME);
-    expect(database.version).toBe(4);
+    expect(database.version).toBe(5);
     const transaction = database.transaction(STORE_NAMES.notificationLog, "readonly");
     expect([...transaction.objectStore(STORE_NAMES.notificationLog).indexNames]).toEqual(["personId"]);
     database.close();
@@ -162,13 +162,15 @@ const v2Metadata = {
 };
 
 /**
- * Creates a version 2 or 3 database (both have the same stores; version 3 only
- * added `Person.photo`) with frozen data, independent of the current code.
+ * Creates a version 2, 3 or 4 database (all have the same stores; versions 3
+ * and 4 only added person photo fields) with frozen data, independent of the
+ * current code.
  */
 function createVersion2Or3Database(
-  version: 2 | 3,
+  version: 2 | 3 | 4,
   peopleRecords: object[] = v2People,
   metadataRecord: object = v2Metadata,
+  logRecords: object[] = [],
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, version);
@@ -190,6 +192,7 @@ function createVersion2Or3Database(
       notificationLog.createIndex("personId", "personId");
 
       peopleRecords.forEach((person) => people.put(person));
+      logRecords.forEach((entry) => notificationLog.put(entry));
       metadata.put(metadataRecord);
     };
     request.onsuccess = () => {
@@ -213,7 +216,7 @@ describe("IndexedDB migration v2 → current", () => {
     );
 
     // toEqual ignores the undefined `key`, which getMetadata() does not return.
-    expect(await repository.getMetadata()).toEqual({ ...v2Metadata, key: undefined, schemaVersion: 4 });
+    expect(await repository.getMetadata()).toEqual({ ...v2Metadata, key: undefined, schemaVersion: 5 });
   });
 });
 
@@ -239,6 +242,33 @@ describe("IndexedDB migration v3 → v4", () => {
       photoSource: null,
       photoCrop: null,
     });
-    expect((await repository.getMetadata()).schemaVersion).toBe(4);
+    expect((await repository.getMetadata()).schemaVersion).toBe(5);
+  });
+});
+
+describe("IndexedDB migration v4 → v5", () => {
+  it("marks reminders shown before the upgrade as seen and keeps everything else", async () => {
+    const v4People = v2People.map((person) => ({ ...person, photo: null, photoSource: null, photoCrop: null }));
+    const shown = {
+      key: "1:DAY:2026-05-14",
+      personId: 1,
+      type: "DAY",
+      occurrenceDate: "2026-05-14",
+      shownAt: "2026-05-14T08:00:00.000Z",
+    };
+    await createVersion2Or3Database(4, v4People, { ...v2Metadata, schemaVersion: 4 }, [shown]);
+
+    repository = createGiftListRepository({ databaseName: DATABASE_NAME });
+    await repository.initialize();
+
+    // An old reminder must not reappear in the "Zmeškané připomínky" card after the upgrade.
+    expect(await repository.listUnseenReminders()).toEqual([]);
+    expect(await repository.listNotificationLogKeys()).toEqual([shown.key]);
+    expect(await repository.listPeople()).toEqual(v4People);
+    expect(await repository.getMetadata()).toEqual({ ...v2Metadata, key: undefined, schemaVersion: 5 });
+
+    const database = await openGiftListDatabase(DATABASE_NAME);
+    expect(database.version).toBe(5);
+    database.close();
   });
 });

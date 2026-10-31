@@ -66,7 +66,7 @@ A gift has exactly one status.
 
 ### Changing the recipient
 
-When editing a gift, the recipient can be changed to another existing person. The gift keeps its ID, links, tags, buyer, note, priority, and status, and moves to the new recipient's list. This changes only this one record (it does not create a copy).
+When editing a gift, the recipient can be changed to another existing person. The gift keeps its ID, links, tags, buyer, note, priority, and status, and moves to the new recipient's list. This changes only this one record (it does not create a copy). After saving, the app opens the new recipient's list (toast "Přesunuto k osobě …") instead of returning to the old one, where the gift would be missing.
 
 ## 3. Multiple recipients
 
@@ -216,14 +216,13 @@ On evaluation, the app finds reminders that are **due (due date ≤ today)**, **
 
 For the found reminders:
 1. If notifications are enabled and permitted, show **one** system notification titled "Narozeniny – GiftList" summarizing them in gender-neutral form (e.g. "Jana: narozeniny za 30 dní · Petr: narozeniny dnes"). Tapping it opens the app.
-2. Show the **Zmeškané připomínky** card on the People screen listing each reminder (avatar, name, "narozeniny dnes / zítra / za X dní / včera / před X dny", age if known). The card has "Zavřít"; tapping a person opens their detail.
-3. Record each reminder in NotificationLog so it is never shown again.
+2. Record each reminder in NotificationLog so it is never notified again.
+3. Show the **Zmeškané připomínky** card on the People screen listing each recorded reminder (avatar, name, "narozeniny dnes / zítra / za X dní / včera / před X dny", age if known) until the user closes it. The card is built from NotificationLog, so it also shows reminders recorded by the background check while the app was closed, and it survives reloads. "Zavřít" marks the listed reminders as seen; tapping a person opens their detail.
 
-If the setting is off, nothing is evaluated or recorded.
+If the setting is off, nothing is evaluated or recorded and the card is not shown.
 
 ### Known limitations
 - On Android, Chrome shows system notifications only through the service worker, which is registered in the production build (not in `npm run dev`).
-- The card lists reminders found during the current session; after a reload they are already recorded in NotificationLog and are not repeated.
 - Without the optional background check (unsupported browser, not installed, or not granted by the browser), nothing is evaluated while the app is closed.
 
 ### Notification permission

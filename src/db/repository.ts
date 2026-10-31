@@ -78,7 +78,7 @@ export type CreateGiftLinkInput = Pick<GiftLink, "giftId" | "url" | "title">;
 export type UpdateGiftLinkInput = Partial<Pick<GiftLink, "url" | "title">>;
 export type UpdatePreferencesInput = Partial<AppPreferences>;
 
-export type ReminderClaim = Omit<NotificationLogEntry, "shownAt">;
+export type ReminderClaim = Omit<NotificationLogEntry, "shownAt" | "seenAt">;
 
 /** An import was refused because the merged data would be invalid; the message is Czech. */
 export class ImportError extends Error {}
@@ -140,6 +140,8 @@ export type GiftListRepository = {
 
   /** Links of one gift ordered by sortOrder. */
   listGiftLinks(giftId: number): Promise<GiftLink[]>;
+  /** Every gift link (for the link shortcut in gift lists); not ordered. */
+  listAllGiftLinks(): Promise<GiftLink[]>;
   /** Appends the link at the end of the gift's links. */
   createGiftLink(input: CreateGiftLinkInput): Promise<GiftLink>;
   updateGiftLink(id: number, input: UpdateGiftLinkInput): Promise<GiftLink>;
@@ -159,6 +161,10 @@ export type GiftListRepository = {
    * people are skipped; entries older than one year are removed.
    */
   claimReminders(entries: ReminderClaim[]): Promise<string[]>;
+  /** Reminders recorded on this device that the user has not closed in the app yet. */
+  listUnseenReminders(): Promise<NotificationLogEntry[]>;
+  /** Marks the reminders as closed in the app (they leave the "Zmeškané připomínky" card). */
+  markRemindersSeen(keys: string[]): Promise<void>;
 
   /** All exportable data, read in one transaction (DATABASE.md → Backup schema). */
   exportBackup(): Promise<BackupDocument>;
@@ -1062,6 +1068,10 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
       await done;
     },
 
+    listAllGiftLinks(): Promise<GiftLink[]> {
+      return readAll<GiftLink>(STORE_NAMES.giftLinks);
+    },
+
     async listGiftTagIds(giftId: number): Promise<number[]> {
       assertPositiveId(giftId, "ID dárku");
       const associations = await readAll<GiftTag>(STORE_NAMES.giftTags, "giftId", giftId);
@@ -1187,12 +1197,28 @@ export function createGiftListRepository(options: RepositoryOptions = {}): GiftL
           const existing = await requestResult(log.get(entry.key) as IDBRequest<NotificationLogEntry | undefined>);
           const person = await requestResult(people.get(entry.personId) as IDBRequest<Person | undefined>);
           if (existing !== undefined || person === undefined) continue;
-          log.put({ ...entry, shownAt: shownAt.toISOString() } satisfies NotificationLogEntry);
+          log.put({ ...entry, shownAt: shownAt.toISOString(), seenAt: null } satisfies NotificationLogEntry);
           claimed.push(entry.key);
         }
         const all = await requestResult(log.getAll() as IDBRequest<NotificationLogEntry[]>);
         all.filter((entry) => entry.shownAt < oldestKept).forEach((entry) => log.delete(entry.key));
         return claimed;
+      });
+    },
+
+    async listUnseenReminders(): Promise<NotificationLogEntry[]> {
+      const entries = await readAll<NotificationLogEntry>(STORE_NAMES.notificationLog);
+      return entries.filter((entry) => entry.seenAt === null);
+    },
+
+    markRemindersSeen(keys: string[]): Promise<void> {
+      const seenAt = now().toISOString();
+      return inTransaction([STORE_NAMES.notificationLog], async (transaction) => {
+        const log = transaction.objectStore(STORE_NAMES.notificationLog);
+        for (const key of new Set(keys)) {
+          const entry = await requestResult(log.get(key) as IDBRequest<NotificationLogEntry | undefined>);
+          if (entry !== undefined && entry.seenAt === null) log.put({ ...entry, seenAt });
+        }
       });
     },
   };

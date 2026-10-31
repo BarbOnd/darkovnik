@@ -1,6 +1,6 @@
 import type { CropView } from "./photo";
 
-export const GIFT_PRIORITIES =["LOW", "MEDIUM", "HIGH"] as const;
+export const GIFT_PRIORITIES = ["LOW", "MEDIUM", "HIGH"] as const;
 export type GiftPriority = (typeof GIFT_PRIORITIES)[number];
 
 export const GIFT_STATUSES = ["NEW", "BOUGHT", "GIVEN"] as const;
@@ -79,4 +79,6 @@ export type NotificationLogEntry = {
   type: ReminderType;
   occurrenceDate: string;
   shownAt: string;
+  /** When the user closed the reminder in the "Zmeškané připomínky" card; null until then. */
+  seenAt: string | null;
 };

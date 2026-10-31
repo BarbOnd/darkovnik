@@ -6,6 +6,7 @@ import {
   dueReminders,
   formatIsoDate,
   localDateOf,
+  missedReminders,
   nextOccurrence,
   reminderKey,
   upcomingBirthdays,
@@ -140,5 +141,24 @@ describe("due reminders", () => {
       ["Petr", "BEFORE_30"],
     ]);
     expect(reminders[1].age).toBe(36);
+  });
+});
+
+describe("missed reminders (card contents from NotificationLog)", () => {
+  it("joins unseen log entries with people, skips deleted people and sorts soonest first", () => {
+    const people = [person(1, "Jana", "1990-05-14"), person(2, "Petr", "--06-13")];
+    const entries = [
+      { key: "2:BEFORE_30:2026-06-13", personId: 2, type: "BEFORE_30" as const, occurrenceDate: "2026-06-13" },
+      { key: "1:DAY:2026-05-14", personId: 1, type: "DAY" as const, occurrenceDate: "2026-05-14" },
+      { key: "9:DAY:2026-05-10", personId: 9, type: "DAY" as const, occurrenceDate: "2026-05-10" },
+      { key: "1:DAY:bad", personId: 1, type: "DAY" as const, occurrenceDate: "--05-14" },
+    ];
+
+    const missed = missedReminders(entries, people, date("2026-05-16"));
+    expect(missed.map((reminder) => [reminder.key, reminder.person.name, reminder.daysUntil, reminder.age])).toEqual([
+      ["1:DAY:2026-05-14", "Jana", -2, 36],
+      ["2:BEFORE_30:2026-06-13", "Petr", 28, null],
+    ]);
+    expect(missed[0].occurrence).toEqual(date("2026-05-14"));
   });
 });

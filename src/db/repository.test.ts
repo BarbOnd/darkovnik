@@ -1022,6 +1022,14 @@ describe("notification log (birthday reminders)", () => {
     expect(await repository.claimReminders([claim])).toEqual([]);
     expect(await repository.listNotificationLogKeys()).toEqual([claim.key]);
 
+    // A claimed reminder stays "unseen" until the user closes the card, even across reloads.
+    expect(await repository.listUnseenReminders()).toEqual([
+      { ...claim, shownAt: "2026-01-01T12:00:00.000Z", seenAt: null },
+    ]);
+    await repository.markRemindersSeen([claim.key, "missing-key"]);
+    expect(await repository.listUnseenReminders()).toEqual([]);
+    expect(await repository.listNotificationLogKeys()).toEqual([claim.key]);
+
     await expect(
       repository.claimReminders([{ ...claim, key: "x", type: "WEEK" as never }]),
     ).rejects.toThrow("Neplatný typ připomínky.");

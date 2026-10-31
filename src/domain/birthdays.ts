@@ -1,5 +1,5 @@
 import { parseBirthday, type BirthdayParts } from "./birthday";
-import type { Person, ReminderType } from "./entities";
+import type { NotificationLogEntry, Person, ReminderType } from "./entities";
 import { comparePeopleByName } from "./sorting";
 
 /**
@@ -151,6 +151,36 @@ export function dueReminders<P extends BirthdayPerson>(
         age: ageAt(person.birthday, occurrence),
       });
     }
+  }
+  return reminders.sort((a, b) => a.daysUntil - b.daysUntil || comparePeopleByName(a.person, b.person));
+}
+
+/**
+ * Reminders recorded on this device (also by the background check) that the
+ * user has not closed yet, for the "Zmeškané připomínky" card. Entries of
+ * deleted people are skipped; `daysUntil` is relative to `today`.
+ */
+export function missedReminders<P extends BirthdayPerson>(
+  entries: readonly Pick<NotificationLogEntry, "key" | "personId" | "type" | "occurrenceDate">[],
+  people: readonly P[],
+  today: LocalDate,
+): DueReminder<P>[] {
+  const peopleById = new Map(people.map((person) => [person.id, person]));
+  const reminders: DueReminder<P>[] = [];
+  for (const entry of entries) {
+    const person = peopleById.get(entry.personId);
+    const parts = parseBirthday(entry.occurrenceDate);
+    if (person === undefined || parts === null || parts.year === null) continue;
+    const occurrence = { year: parts.year, month: parts.month, day: parts.day };
+    reminders.push({
+      key: entry.key,
+      person,
+      type: entry.type,
+      occurrence,
+      occurrenceDate: entry.occurrenceDate,
+      daysUntil: daysBetween(today, occurrence),
+      age: ageAt(person.birthday, occurrence),
+    });
   }
   return reminders.sort((a, b) => a.daysUntil - b.daysUntil || comparePeopleByName(a.person, b.person));
 }

@@ -13,7 +13,7 @@ Clean modern sans-serif via the system font stack (speed and offline reliability
 ## Themes
 
 - Light and dark theme, implemented with CSS custom properties (design tokens).
-- Default follows the system (`prefers-color-scheme`); Settings can force Světlý / Tmavý.
+- Default follows the system (`prefers-color-scheme`); Settings can force Světlý / Tmavý. A forced theme is applied before the first render (mirrored in `localStorage`), so the start does not flash the system theme.
 - Set `<meta name="theme-color">` for both themes so the Android status bar matches.
 - Check contrast and avatar legibility in both themes.
 
@@ -78,8 +78,9 @@ Dárky                [Podle priority ▾]
 [Narozeniny] [Vánoce] [Výročí]
 Zrušit filtry
 
-Kniha
+Kniha                               ↗
 ★★★  Koupí: Petr  [Narozeniny]
+vázané vydání, ne brožura
 
 Sluchátka                          ✓
 ★★☆
@@ -93,6 +94,7 @@ Sluchátka                          ✓
 - "Zrušit filtry" appears only when filters differ from the default (Aktivní, no tags).
 - Given gifts are hidden unless "Předáno" or "Vše" is selected.
 - Tapping a gift opens its edit form. New gifts are added only through quick add: the floating "+" (and "Přidat dárek" in the empty state) opens it with this person preselected.
+- A gift with links shows an "open" icon (↗) at the right edge of the row that opens its first link externally, without entering the edit form (accessible name "Otevřít odkaz: alza.cz", plus the link count when there are more). The first line of the note is shown under the meta line, truncated to one line.
 
 ## Reorder mode
 
