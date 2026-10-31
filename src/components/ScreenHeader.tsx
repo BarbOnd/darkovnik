@@ -12,6 +12,30 @@ type ScreenHeaderProps = {
   leading?: ReactNode;
 };
 
+type HeaderSaveButtonProps = {
+  /** The form it submits (`<form id>`), so the button can sit outside the form in the header. */
+  formId: string;
+  saving: boolean;
+  disabled?: boolean;
+};
+
+/**
+ * "Uložit" in the screen header of long forms, so the user does not have to
+ * scroll to the bottom (UI.md → Buttons). Submits the same form as the bottom button.
+ */
+export function HeaderSaveButton({ formId, saving, disabled = false }: HeaderSaveButtonProps) {
+  return (
+    <button
+      type="submit"
+      form={formId}
+      className="button button--primary screen-header__save"
+      disabled={saving || disabled}
+    >
+      {saving ? "Ukládám…" : "Uložit"}
+    </button>
+  );
+}
+
 /** Screen title; receives focus on mount so screen readers announce the new screen. */
 export function ScreenHeader({ title, backFallback, backLabel = "Zpět", actions, leading }: ScreenHeaderProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);

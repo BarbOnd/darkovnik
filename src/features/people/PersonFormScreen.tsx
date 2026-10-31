@@ -3,7 +3,7 @@ import { useApp } from "../../app/AppContext";
 import { goBack, paths, replaceRoute } from "../../app/routes";
 import { Dialog } from "../../components/Dialog";
 import { PersonAvatar } from "../../components/PersonAvatar";
-import { ScreenHeader } from "../../components/ScreenHeader";
+import { HeaderSaveButton, ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import type { Person } from "../../domain/entities";
 import { createAvatarSeed } from "../../lib/avatar";
@@ -24,13 +24,16 @@ type PersonFormValues = Pick<Person, "name" | "birthday" | "avatarSeed" | "note"
 };
 
 type PersonFormProps = {
+  /** Screen title; the form renders its own header so "Uložit" up there can show the saving state. */
+  title: string;
   initial: PersonFormValues;
   submitLabel: string;
   cancelFallback: string;
   onSubmit(values: PersonFormValues): Promise<void>;
 };
 
-function PersonForm({ initial, submitLabel, cancelFallback, onSubmit }: PersonFormProps) {
+function PersonForm({ title, initial, submitLabel, cancelFallback, onSubmit }: PersonFormProps) {
+  const formId = useId();
   const nameId = useId();
   const noteId = useId();
   const errorId = useId();
@@ -84,6 +87,7 @@ function PersonForm({ initial, submitLabel, cancelFallback, onSubmit }: PersonFo
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (saving || processingPhoto) return;
     if (name.trim() === "") {
       setError({ field: "name", message: "Vyplňte jméno." });
       return;
@@ -104,7 +108,13 @@ function PersonForm({ initial, submitLabel, cancelFallback, onSubmit }: PersonFo
   }
 
   return (
-    <form className="form" onSubmit={handleSubmit} noValidate>
+    <>
+    <ScreenHeader
+      title={title}
+      backFallback={cancelFallback}
+      actions={<HeaderSaveButton formId={formId} saving={saving} disabled={processingPhoto} />}
+    />
+    <form id={formId} className="form" onSubmit={handleSubmit} noValidate>
       <div className="avatar-field">
         <PersonAvatar
           seed={avatarSeed}
@@ -245,6 +255,7 @@ function PersonForm({ initial, submitLabel, cancelFallback, onSubmit }: PersonFo
         </Dialog>
       )}
     </form>
+    </>
   );
 }
 
@@ -260,8 +271,8 @@ export function NewPersonScreen() {
 
   return (
     <>
-      <ScreenHeader title="Nová osoba" backFallback={paths.people()} />
       <PersonForm
+        title="Nová osoba"
         initial={initial}
         submitLabel="Přidat osobu"
         cancelFallback={paths.people()}
@@ -281,9 +292,11 @@ export function EditPersonScreen({ personId }: { personId: number }) {
   const load = useCallback(() => repository.getPerson(personId), [repository, personId]);
   const person = useLoad(load);
 
+  const ready = person.status === "ready" && person.data !== undefined;
+
   return (
     <>
-      <ScreenHeader title="Upravit osobu" backFallback={paths.person(personId)} />
+      {!ready && <ScreenHeader title="Upravit osobu" backFallback={paths.person(personId)} />}
       {person.status === "loading" && <StatusMessage kind="loading" />}
       {person.status === "error" && <StatusMessage kind="error" message="Osobu se nepodařilo načíst." />}
       {person.status === "ready" && person.data === undefined && (
@@ -291,6 +304,7 @@ export function EditPersonScreen({ personId }: { personId: number }) {
       )}
       {person.status === "ready" && person.data !== undefined && (
         <PersonForm
+          title="Upravit osobu"
           initial={{ ...person.data, photo: photoOfPerson(person.data) }}
           submitLabel="Uložit"
           cancelFallback={paths.person(personId)}

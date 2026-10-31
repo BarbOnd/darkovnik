@@ -290,6 +290,13 @@ select {
   align-items: center;
 }
 
+/* "Uložit" in the header of long forms (the bottom button stays). */
+.screen-header__save {
+  min-height: 40px;
+  padding: 0 16px;
+  margin-left: 8px;
+}
+
 /* Brand icon next to the app title on the People screen. */
 .screen-header__logo {
   width: 32px;

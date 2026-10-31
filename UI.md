@@ -206,7 +206,7 @@ Texts mentioning people stay gender-neutral (e.g. "Jana: narozeniny dnes"), beca
 
 ## Buttons and destructive actions
 
-Primary actions are visually clear. Destructive actions are separated and require confirmation. Person deletion warns if the person is a buyer on other gifts. Import into an installation with data shows the overwrite confirmation.
+Primary actions are visually clear. The person form, the gift form and quick add also have **"Uložit" in the screen header** (next to the back arrow), so a long form does not have to be scrolled to the bottom; it submits the same form as the bottom button and shows "Ukládám…" while saving. Destructive actions are separated and require confirmation. Person deletion warns if the person is a buyer on other gifts. Import into an installation with data shows the overwrite confirmation.
 
 ## Accessibility
 

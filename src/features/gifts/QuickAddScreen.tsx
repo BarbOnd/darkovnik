@@ -2,7 +2,7 @@ import { useCallback, useId, useRef, useState, type FormEvent, type KeyboardEven
 import { useApp } from "../../app/AppContext";
 import { goBack, paths, type SharedContent } from "../../app/routes";
 import { PersonAvatar } from "../../components/PersonAvatar";
-import { ScreenHeader } from "../../components/ScreenHeader";
+import { HeaderSaveButton, ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import { PlusIcon } from "../../components/icons";
 import type { Gift, Person, Tag } from "../../domain/entities";
@@ -45,6 +45,7 @@ function QuickAddForm({ initialPeople, initialGifts, tags, preselectedId, shared
 }) {
   const { repository, showToast } = useApp();
   const id = useId();
+  const formId = `${id}-form`;
   const nameRef = useRef<HTMLInputElement>(null);
   const newPersonRef = useRef<HTMLInputElement>(null);
   const [people, setPeople] = useState(() => [...initialPeople].sort(comparePeopleByName));
@@ -105,6 +106,7 @@ function QuickAddForm({ initialPeople, initialGifts, tags, preselectedId, shared
   }
 
   async function save(addAnother: boolean) {
+    if (saving) return;
     setError(null);
     const giftName = name.trim();
     let recipients = recipientIds;
@@ -168,7 +170,14 @@ function QuickAddForm({ initialPeople, initialGifts, tags, preselectedId, shared
   const errorId = `${id}-error`;
 
   return (
-    <form className="form" onSubmit={handleSubmit} noValidate>
+    <>
+    <ScreenHeader
+      title="Přidat dárek"
+      backFallback={closeTo}
+      actions={<HeaderSaveButton formId={formId} saving={saving} />}
+    />
+    {shared !== null && <p className="muted">Nápad ze sdílené stránky. Zkontrolujte název a vyberte, pro koho je.</p>}
+    <form id={formId} className="form" onSubmit={handleSubmit} noValidate>
       <fieldset className="field" aria-describedby={error?.field === "recipients" ? errorId : undefined}>
         <legend className="field__label">Pro koho</legend>
         {people.length > 0 && (
@@ -296,6 +305,7 @@ function QuickAddForm({ initialPeople, initialGifts, tags, preselectedId, shared
         </button>
       </div>
     </form>
+    </>
   );
 }
 
@@ -315,8 +325,7 @@ export function QuickAddScreen({ personId, shared }: { personId: number | null; 
 
   return (
     <>
-      <ScreenHeader title="Přidat dárek" backFallback={closeTo} />
-      {shared !== null && <p className="muted">Nápad ze sdílené stránky. Zkontrolujte název a vyberte, pro koho je.</p>}
+      {options.status !== "ready" && <ScreenHeader title="Přidat dárek" backFallback={closeTo} />}
       {options.status === "loading" && <StatusMessage kind="loading" />}
       {options.status === "error" && <StatusMessage kind="error" message="Seznam lidí se nepodařilo načíst." />}
       {options.status === "ready" && (

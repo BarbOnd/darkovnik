@@ -2,7 +2,7 @@ import { useCallback, useId, useState, type FormEvent } from "react";
 import { useApp } from "../../app/AppContext";
 import { goBack, paths, replaceRoute } from "../../app/routes";
 import { Dialog } from "../../components/Dialog";
-import { ScreenHeader } from "../../components/ScreenHeader";
+import { HeaderSaveButton, ScreenHeader } from "../../components/ScreenHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import type { Gift, Person, Tag } from "../../domain/entities";
 import { priceToInput } from "../../domain/gifts";
@@ -24,6 +24,8 @@ type GiftFormSubmit = PreparedGiftDetails & { recipientId: number; name: string 
 
 /** Full gift form for editing; new gifts are created through quick add (PRODUCT.md §11). */
 type GiftFormProps = {
+  /** Screen title; the form renders its own header so "Uložit" up there can show the saving state. */
+  title: string;
   people: Person[];
   tags: Tag[];
   initial: GiftFormValues;
@@ -35,8 +37,9 @@ type GiftFormProps = {
 
 type FormError = { field: "name" | "links" | "price" | "save"; message: string; rowKey?: string };
 
-function GiftForm({ people, tags, initial, submitLabel, cancelFallback, onSubmit, onDelete }: GiftFormProps) {
+function GiftForm({ title, people, tags, initial, submitLabel, cancelFallback, onSubmit, onDelete }: GiftFormProps) {
   const id = useId();
+  const formId = `${id}-form`;
   const [values, setValues] = useState(initial);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [error, setError] = useState<FormError | null>(null);
@@ -45,6 +48,7 @@ function GiftForm({ people, tags, initial, submitLabel, cancelFallback, onSubmit
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     if (values.name.trim() === "") {
       setError({ field: "name", message: "Vyplňte název dárku." });
       return;
@@ -72,7 +76,13 @@ function GiftForm({ people, tags, initial, submitLabel, cancelFallback, onSubmit
   const errorId = `${id}-error`;
 
   return (
-    <form className="form" onSubmit={handleSubmit} noValidate>
+    <>
+    <ScreenHeader
+      title={title}
+      backFallback={cancelFallback}
+      actions={<HeaderSaveButton formId={formId} saving={saving} />}
+    />
+    <form id={formId} className="form" onSubmit={handleSubmit} noValidate>
       <div className="field">
         <label className="field__label" htmlFor={`${id}-recipient`}>
           Pro koho
@@ -140,6 +150,7 @@ function GiftForm({ people, tags, initial, submitLabel, cancelFallback, onSubmit
         </div>
       )}
     </form>
+    </>
   );
 }
 
@@ -200,10 +211,7 @@ export function EditGiftScreen({ giftId }: { giftId: number }) {
 
   return (
     <>
-      <ScreenHeader
-        title="Upravit dárek"
-        backFallback={data === undefined ? paths.people() : paths.person(data.gift.personId)}
-      />
+      {data === undefined && <ScreenHeader title="Upravit dárek" backFallback={paths.people()} />}
       {result.status === "loading" && <StatusMessage kind="loading" />}
       {result.status === "error" && <StatusMessage kind="error" message="Dárek se nepodařilo načíst." />}
       {result.status === "ready" && data === undefined && (
@@ -211,6 +219,7 @@ export function EditGiftScreen({ giftId }: { giftId: number }) {
       )}
       {data !== undefined && (
         <GiftForm
+          title="Upravit dárek"
           people={data.people}
           tags={data.tags}
           initial={{
