@@ -24,7 +24,7 @@ Accounts, login, cloud database, cloud sync, analytics, tracking, AI API, paid s
 
 ## Zero cost & privacy
 
-Hosted on GitHub Pages (GitHub Free) at `https://<github-user>.github.io/darkovnik/`, deployed by GitHub Actions on every push. No API keys. All data (incl. birthdays and photos) stays in the browser on the device; exported JSON files are private.
+Hosted on GitHub Pages (GitHub Free) at `https://barbond.github.io/darkovnik/`, deployed by GitHub Actions on every push. No API keys. All data (incl. birthdays and photos) stays in the browser on the device; exported JSON files are private.
 
 ## Development
 

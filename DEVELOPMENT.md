@@ -105,7 +105,7 @@ Never make a destructive storage migration without understanding the existing sc
 
 GitHub Pages, GitHub Free, public repository, HTTPS, static build. No server runtime.
 
-Deployment: `.github/workflows/deploy.yml` runs lint, tests and the build on every push to `master` and publishes `dist/` with GitHub Pages actions. One-time setup in the repository: Settings → Pages → Source: **GitHub Actions**. The app is then served at `https://<github-user>.github.io/darkovnik/` (`base` in `vite.config.ts` must match the repository name). After a deploy, open the URL on the phone, install it from the browser menu, and check the open items of TODO.md phase 9.
+Deployment: `.github/workflows/deploy.yml` runs lint, tests and the build on every push to `master` and publishes `dist/` with GitHub Pages actions. One-time setup in the repository: Settings → Pages → Source: **GitHub Actions**, and Settings → Environments → `github-pages` → Deployment branches must allow `master` (GitHub pre-fills `main` when Pages is enabled before the first push; otherwise the deploy job fails with "Branch \"master\" is not allowed to deploy to github-pages"). The app is then served at `https://barbond.github.io/darkovnik/` (`base` in `vite.config.ts` must match the repository name). After a deploy, open the URL on the phone, install it from the browser menu, and check the open items of TODO.md phase 9.
 
 Commits in the public repository show the author e-mail; use the GitHub noreply address (`git config user.email "<id>+<user>@users.noreply.github.com"`), as set for this repository.
 

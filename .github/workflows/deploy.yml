@@ -1,5 +1,6 @@
 # Builds the app and publishes dist/ to GitHub Pages on every push to master.
-# Repository settings → Pages → Source must be "GitHub Actions" (one-time step).
+# Repository settings → Pages → Source must be "GitHub Actions", and the github-pages
+# environment must allow deployments from master (one-time steps, see DEVELOPMENT.md).
 name: Deploy to GitHub Pages
 
 on:
