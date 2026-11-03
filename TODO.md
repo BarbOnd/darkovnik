@@ -178,8 +178,9 @@ Phases 2b and the quick-add details were added on the user's request during deve
 ## Phase 9 — Release
 
 - [x] Decided: repository name `darkovnik` (→ `base`)
-- [ ] Rewrite the commit author e-mail to the GitHub noreply address (`<id>+<user>@users.noreply.github.com`) before the first push — needs the GitHub user name; all commits currently carry the work address
-- [ ] User creates an empty public GitHub repository `darkovnik` (the `gh` CLI is not installed); add it as `origin`; local branch is `master`; Settings → Pages → Source: GitHub Actions
+- [x] Commit author e-mail rewritten to the GitHub noreply address (`298691287+BarbOnd@users.noreply.github.com`) in the whole history; set as local `user.email`
+- [x] Public GitHub repository `BarbOnd/darkovnik` created and added as `origin`; local branch is `master`; Settings → Pages → Source: GitHub Actions
+- [ ] First push (`git push -u origin master`) and a green run of the deploy workflow
 - [x] `base` in `vite.config.ts` set to `/darkovnik/`; icons, manifest and service worker checked under that path (`npm run build` + `npm run preview`)
 - [x] GitHub Actions workflow deploying to GitHub Pages (`.github/workflows/deploy.yml`: lint, tests, build, Pages deploy)
 - [ ] Verify HTTPS after the first deploy
