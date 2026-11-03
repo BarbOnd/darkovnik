@@ -177,10 +177,10 @@ Phases 2b and the quick-add details were added on the user's request during deve
 
 ## Phase 9 — Release
 
-- [x] Decided: repository name `darkovnik` (→ `base`); commit author e-mail rewritten to the GitHub noreply address before the first push
-- [ ] User creates an empty public GitHub repository `darkovnik` (the `gh` CLI is not installed); add it as `origin`; local branch is `master`; Settings → Pages → Source: GitHub Actions
+- [x] Decided: repository name `darkovnik` (→ `base`); commit author e-mail rewritten to the GitLab noreply address before the first push
+- [ ] User creates an empty public GitLab project `darkovnik`; add it as `origin`; local branch is `master`; after the first pipeline check Settings → Pages (URL, "Use unique domain" off for the `/darkovnik/` address)
 - [x] `base` in `vite.config.ts` set to `/darkovnik/`; icons, manifest and service worker checked under that path (`npm run build` + `npm run preview`)
-- [x] GitHub Actions workflow deploying to GitHub Pages (`.github/workflows/deploy.yml`: lint, tests, build, Pages deploy)
+- [x] GitLab CI `pages` job (`.gitlab-ci.yml`: lint, tests, build, Pages publish; base path from the Pages URL)
 - [ ] Verify HTTPS after the first deploy
 - [ ] Install and test on Android (incl. the open items of phases 6 and 8: system notifications, standalone mode, background check)
 - [ ] Test export/import on the device

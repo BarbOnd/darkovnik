@@ -146,4 +146,4 @@ Do not start the next phase while the current phase is broken. Do not implement 
 
 ## Release hosting
 
-GitHub Pages, GitHub Free, public repository, HTTPS, no custom domain, no server runtime.
+GitLab Pages (gitlab.com, free tier), public repository, HTTPS, no custom domain, no server runtime. Deployment by the `pages` job in `.gitlab-ci.yml`.

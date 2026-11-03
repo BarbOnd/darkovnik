@@ -22,7 +22,7 @@ The UI must not access IndexedDB directly. A small repository abstraction keeps 
 ## Technology
 
 ### Vite
-Build tool and development server. For GitHub Pages, `base` in `vite.config.ts` is `/darkovnik/` (the repository name); the manifest `id`, `start_url`, `scope` and `share_target.action` are relative so they follow `base`, and the service worker resolves its precache against its registration scope. `npm run preview` therefore serves the app at `http://localhost:4173/darkovnik/`.
+Build tool and development server. For GitLab Pages, `base` in `vite.config.ts` defaults to `/darkovnik/` (the project name) and can be overridden with the `BASE_PATH` environment variable, which `.gitlab-ci.yml` derives from the real Pages URL (so a unique Pages domain with base `/` works as well). The manifest `id`, `start_url`, `scope` and `share_target.action` are relative so they follow `base`, and the service worker resolves its precache against its registration scope. `npm run preview` therefore serves the app at `http://localhost:4173/darkovnik/`.
 
 ### React
 UI and component model.
@@ -91,7 +91,7 @@ What lives where:
 
 Conventions:
 - Screens get data through `useApp().repository` and `useLoad(loader)`; there is no global store.
-- Navigation uses hash routes so GitHub Pages needs no server rewrites; after saving, screens return with `goBack(fallback)` so the Android back button does not revisit forms.
+- Navigation uses hash routes so GitLab Pages needs no server rewrites; after saving, screens return with `goBack(fallback)` so the Android back button does not revisit forms.
 - Repository methods validate input and throw Czech `Error` messages meant for the user; raw IndexedDB errors (`DOMException`) get a generic Czech message in the UI.
 - Code shared with the service worker (`features/notifications/evaluate.ts`, `db/`, `domain/`) must not use `window` or DOM APIs.
 - Tests sit next to the code (`*.test.ts`), IndexedDB is tested with `fake-indexeddb`.
@@ -140,7 +140,7 @@ Friendly Czech messages. Never show raw database errors as the primary UI.
 
 ## Hosting
 
-Static client-side app on GitHub Pages (HTTPS, required for PWA installation and notifications).
+Static client-side app on GitLab Pages (HTTPS, required for PWA installation and notifications), published by the `pages` job in `.gitlab-ci.yml` on every push to `master`.
 
 ## Zero-cost and privacy constraints
 

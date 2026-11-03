@@ -103,11 +103,11 @@ Never make a destructive storage migration without understanding the existing sc
 
 ## Zero-cost release
 
-GitHub Pages, GitHub Free, public repository, HTTPS, static build. No server runtime.
+GitLab Pages (gitlab.com, free tier), public project, HTTPS, static build. No server runtime.
 
-Deployment: `.github/workflows/deploy.yml` runs lint, tests and the build on every push to `master` and publishes `dist/` with GitHub Pages actions. One-time setup in the repository: Settings → Pages → Source: **GitHub Actions**. The app is then served at `https://<github-user>.github.io/darkovnik/` (`base` in `vite.config.ts` must match the repository name). After a deploy, open the URL on the phone, install it from the browser menu, and check the open items of TODO.md phase 9.
+Deployment: the `pages` job in `.gitlab-ci.yml` runs lint, tests and the build on every push to `master` and publishes `dist/` (renamed to `public/`, as GitLab Pages requires) as the Pages site. No setup is needed beyond pushing; the first pipeline enables Pages. The app is then served at `https://<gitlab-user>.gitlab.io/darkovnik/`, or at the unique Pages domain when that option stays on in Settings → Pages (the job derives `BASE_PATH` from the real URL, so both work). GitLab.com may ask once for account verification (phone or card, no charge) before shared runners run pipelines. After a deploy, open the URL on the phone, install it from the browser menu, and check the open items of TODO.md phase 9.
 
-Commits in the public repository show the author e-mail; use the GitHub noreply address (`git config user.email "<id>+<user>@users.noreply.github.com"`), as set for this repository.
+Commits in the public project show the author e-mail; use the GitLab noreply address (`git config user.email "<id>-<user>@users.noreply.gitlab.com"`), as set for this repository.
 
 Do not commit personal data, exported backups (`darkovnik-zaloha-*.json` belongs in `.gitignore`), secrets, API keys, or credentials.
 
