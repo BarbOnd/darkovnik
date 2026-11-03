@@ -26,7 +26,7 @@ The application is personal and local-first. It has no accounts, login, backend 
 
 The MVP is fully usable without paid hosting, paid APIs, paid databases, paid notification services, accounts, analytics, or API keys.
 
-Stack: React, TypeScript, Vite, PWA (`vite-plugin-pwa`), IndexedDB, locally bundled DiceBear, static hosting on GitLab Pages (gitlab.com free tier).
+Stack: React, TypeScript, Vite, PWA (`vite-plugin-pwa`), IndexedDB, locally bundled DiceBear, static hosting on GitHub Pages (GitHub Free).
 
 ## Privacy
 
