@@ -2,7 +2,7 @@
 
 The only phase plan for GiftList. Work one phase at a time (see `CLAUDE.md`).
 
-**Current status:** phases 0–8 are implemented and committed (each phase has its own commit). Open: checks that need a real Android phone (phases 6 and 8) and phase 9 (release). Next step: phase 9.
+**Current status:** phases 0–12 are implemented and committed; the repository is release-ready (lint, tests, build, content check done 2026-11-03). Open in phase 9: steps that need the user (GitHub repository, author e-mail rewrite, first push) and checks that need a real Android phone (phases 6, 8, 10).
 
 Phases 2b and the quick-add details were added on the user's request during development; their decisions are recorded in `PRODUCT.md`.
 
@@ -177,11 +177,12 @@ Phases 2b and the quick-add details were added on the user's request during deve
 
 ## Phase 9 — Release
 
-- [x] Decided: repository name `darkovnik` (→ `base`); commit author e-mail rewritten to the GitHub noreply address before the first push
+- [x] Decided: repository name `darkovnik` (→ `base`)
+- [ ] Rewrite the commit author e-mail to the GitHub noreply address (`<id>+<user>@users.noreply.github.com`) before the first push — needs the GitHub user name; all commits currently carry the work address
 - [ ] User creates an empty public GitHub repository `darkovnik` (the `gh` CLI is not installed); add it as `origin`; local branch is `master`; Settings → Pages → Source: GitHub Actions
 - [x] `base` in `vite.config.ts` set to `/darkovnik/`; icons, manifest and service worker checked under that path (`npm run build` + `npm run preview`)
 - [x] GitHub Actions workflow deploying to GitHub Pages (`.github/workflows/deploy.yml`: lint, tests, build, Pages deploy)
 - [ ] Verify HTTPS after the first deploy
 - [ ] Install and test on Android (incl. the open items of phases 6 and 8: system notifications, standalone mode, background check)
 - [ ] Test export/import on the device
-- [ ] Confirm repository contains no personal data, backups, secrets, or API keys
+- [x] Confirm repository contains no personal data, backups, secrets, or API keys (checked 2026-11-03: tracked files scanned for backups, keys, e-mails, names; only `jana@example.test` in a test; lint, 302 tests and build pass)
